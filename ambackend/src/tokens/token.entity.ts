@@ -40,6 +40,9 @@ export class TokenEntity {
   @Column({ name: 'expires_at', type: 'timestamp', nullable: true })
   expiresAt: Date | null;
 
+  @Column({ name: 'last_verified_at', type: 'timestamp', nullable: true })
+  lastVerifiedAt: Date | null;
+
   @Column({ name: 'revoked_at', type: 'timestamp', nullable: true })
   revokedAt: Date | null;
 

@@ -18,6 +18,7 @@ export class TokensService {
   async verify(
     rawToken: string,
     requestingAppName: string,
+    userId: string,
   ): Promise<
     | {
         valid: true;
@@ -43,6 +44,10 @@ export class TokensService {
       return { valid: false, reason: 'not_found' };
     }
 
+    if (token.userId !== userId) {
+      return { valid: false, reason: 'not_found' };
+    }
+
     if (token.revokedAt) {
       return { valid: false, reason: 'revoked' };
     }
@@ -50,6 +55,9 @@ export class TokensService {
     if (token.expiresAt && token.expiresAt < new Date()) {
       return { valid: false, reason: 'expired' };
     }
+
+    token.lastVerifiedAt = new Date();
+    await this.tokensRepository.save(token);
 
     return {
       valid: true,
