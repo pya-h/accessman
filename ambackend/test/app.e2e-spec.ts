@@ -86,11 +86,9 @@ describe('AccessMan E2E', () => {
         }),
         TypeOrmModule.forRoot({
           type: 'postgres',
-          host: process.env.DB_HOST || 'localhost',
-          port: parseInt(process.env.DB_PORT, 10) || 5432,
-          username: process.env.DB_USERNAME || 'postgres',
-          password: process.env.DB_PASSWORD || 'postgres',
-          database: process.env.DB_TEST_NAME || 'accessman_test',
+          url:
+            process.env.DATABASE_TEST_URL ||
+            'postgresql://postgres:postgres@localhost:5432/accessman_test',
           entities: [AppEntity, TokenEntity],
           synchronize: true,
           dropSchema: true,
