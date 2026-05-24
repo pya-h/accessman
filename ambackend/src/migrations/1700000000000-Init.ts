@@ -27,9 +27,6 @@ export class Init1700000000000 implements MigrationInterface {
     `);
 
     await queryRunner.query(
-      `CREATE INDEX "IDX_tokens_token_hash" ON "tokens" ("token_hash")`,
-    );
-    await queryRunner.query(
       `CREATE INDEX "IDX_tokens_app_id" ON "tokens" ("app_id")`,
     );
 

@@ -6,12 +6,10 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
-  Index,
 } from 'typeorm';
 import { AppEntity } from '../apps/app.entity';
 
 @Entity('tokens')
-@Index(['tokenHash'])
 export class TokenEntity {
   @PrimaryGeneratedColumn()
   id: number;
