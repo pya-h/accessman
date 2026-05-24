@@ -100,6 +100,23 @@ describe('AppsService', () => {
       );
       expect(repo.save).not.toHaveBeenCalled();
     });
+
+    it('catches DB unique violation and throws ConflictException', async () => {
+      repo.findOne.mockResolvedValue(null);
+      repo.save.mockRejectedValue({ code: '23505' });
+
+      await expect(service.create('race-app')).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('rethrows non-unique-violation errors', async () => {
+      repo.findOne.mockResolvedValue(null);
+      const error = new Error('connection lost');
+      repo.save.mockRejectedValue(error);
+
+      await expect(service.create('new-app')).rejects.toThrow(error);
+    });
   });
 
   describe('findOrCreate', () => {
@@ -122,6 +139,27 @@ describe('AppsService', () => {
       expect(result).toMatchObject({ name: 'new-app' });
       expect(repo.create).toHaveBeenCalledWith({ name: 'new-app' });
       expect(repo.save).toHaveBeenCalled();
+    });
+
+    it('catches DB unique violation and retries findByName', async () => {
+      const app = mockApp({ name: 'race-app' });
+      repo.findOne
+        .mockResolvedValueOnce(null)       // first findByName → not found
+        .mockResolvedValueOnce(app);       // retry findByName → found
+      repo.save.mockRejectedValue({ code: '23505' });
+
+      const result = await service.findOrCreate('race-app');
+
+      expect(result).toBe(app);
+      expect(repo.findOne).toHaveBeenCalledTimes(2);
+    });
+
+    it('rethrows non-unique-violation errors', async () => {
+      repo.findOne.mockResolvedValue(null);
+      const error = new Error('connection lost');
+      repo.save.mockRejectedValue(error);
+
+      await expect(service.findOrCreate('new-app')).rejects.toThrow(error);
     });
   });
 });

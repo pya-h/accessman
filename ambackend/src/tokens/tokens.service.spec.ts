@@ -4,6 +4,7 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { TokensService } from './tokens.service';
 import { TokenEntity } from './token.entity';
 import { generateToken } from './token.utils';
+import { TokenStatus } from './dto/list-tokens-query.dto';
 
 const APP_NAME = 'myapp';
 
@@ -30,14 +31,31 @@ const mockToken = (overrides: Partial<TokenEntity> = {}): TokenEntity =>
     ...overrides,
   }) as TokenEntity;
 
+const mockQueryBuilder = () => {
+  const qb: Record<string, jest.Mock> = {
+    leftJoinAndSelect: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    orWhere: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    skip: jest.fn().mockReturnThis(),
+    take: jest.fn().mockReturnThis(),
+    getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+  };
+  return qb;
+};
+
 describe('TokensService', () => {
   let service: TokensService;
   let repo: Record<string, jest.Mock>;
+  let qb: Record<string, jest.Mock>;
 
   beforeEach(async () => {
+    qb = mockQueryBuilder();
     repo = {
       findOne: jest.fn(),
       save: jest.fn((entity) => Promise.resolve(entity)),
+      createQueryBuilder: jest.fn().mockReturnValue(qb),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -189,6 +207,130 @@ describe('TokensService', () => {
       await expect(
         service.updateMetadata(raw, APP_NAME, {}),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('findAll', () => {
+    it('returns paginated results with defaults', async () => {
+      const tokens = [mockToken()];
+      qb.getManyAndCount.mockResolvedValue([tokens, 1]);
+
+      const result = await service.findAll({});
+
+      expect(result).toEqual({ data: tokens, total: 1, page: 1, limit: 50 });
+      expect(qb.skip).toHaveBeenCalledWith(0);
+      expect(qb.take).toHaveBeenCalledWith(50);
+    });
+
+    it('applies appName filter', async () => {
+      qb.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAll({ appName: 'myapp' });
+
+      expect(qb.andWhere).toHaveBeenCalledWith('app.name = :appName', {
+        appName: 'myapp',
+      });
+    });
+
+    it('applies userId filter', async () => {
+      qb.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAll({ userId: 'user1' });
+
+      expect(qb.andWhere).toHaveBeenCalledWith('token.userId = :userId', {
+        userId: 'user1',
+      });
+    });
+
+    it('applies status=active filter', async () => {
+      qb.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAll({ status: TokenStatus.ACTIVE });
+
+      expect(qb.andWhere).toHaveBeenCalledWith('token.revokedAt IS NULL');
+    });
+
+    it('applies status=revoked filter', async () => {
+      qb.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAll({ status: TokenStatus.REVOKED });
+
+      expect(qb.andWhere).toHaveBeenCalledWith('token.revokedAt IS NOT NULL');
+    });
+
+    it('applies pagination correctly', async () => {
+      qb.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAll({ page: 3, limit: 20 });
+
+      expect(qb.skip).toHaveBeenCalledWith(40);
+      expect(qb.take).toHaveBeenCalledWith(20);
+    });
+  });
+
+  describe('findOne', () => {
+    it('returns token with computed status=active', async () => {
+      const token = mockToken();
+      repo.findOne.mockResolvedValue(token);
+
+      const result = await service.findOne(1);
+
+      expect(result.status).toBe('active');
+      expect(result.id).toBe(1);
+    });
+
+    it('returns token with computed status=revoked', async () => {
+      const token = mockToken({ revokedAt: new Date() });
+      repo.findOne.mockResolvedValue(token);
+
+      const result = await service.findOne(1);
+
+      expect(result.status).toBe('revoked');
+    });
+
+    it('returns token with computed status=expired', async () => {
+      const token = mockToken({
+        expiresAt: new Date(Date.now() - 86400000),
+        revokedAt: null,
+      });
+      repo.findOne.mockResolvedValue(token);
+
+      const result = await service.findOne(1);
+
+      expect(result.status).toBe('expired');
+    });
+
+    it('throws NotFoundException when not found', async () => {
+      repo.findOne.mockResolvedValue(null);
+
+      await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('revoke', () => {
+    it('revokes an active token', async () => {
+      const token = mockToken({ revokedAt: null });
+      repo.findOne.mockResolvedValue(token);
+
+      const result = await service.revoke(1);
+
+      expect(result.success).toBe(true);
+      expect(result.revokedAt).toBeInstanceOf(Date);
+      expect(repo.save).toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when token not found', async () => {
+      repo.findOne.mockResolvedValue(null);
+
+      await expect(service.revoke(999)).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws BadRequestException when already revoked', async () => {
+      const token = mockToken({ revokedAt: new Date() });
+      repo.findOne.mockResolvedValue(token);
+
+      await expect(service.revoke(1)).rejects.toThrow(BadRequestException);
+      expect(repo.save).not.toHaveBeenCalled();
     });
   });
 });

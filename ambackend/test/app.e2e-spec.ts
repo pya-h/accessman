@@ -686,6 +686,329 @@ describe('AccessMan E2E', () => {
     });
   });
 
+  // ─── GET /api/apps ─────────────────────────────────────────────────
+
+  describe('GET /api/apps', () => {
+    beforeAll(async () => {
+      await cleanDb();
+      await seedAdminApp();
+      // Import tokens to auto-register apps
+      await importToken('user1', 'alpha-app');
+      await importToken('user2', 'beta-app');
+    });
+
+    it('returns list of apps including auto-registered', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/apps',
+        headers: operatorHeaders,
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.payload);
+      expect(body).toBeInstanceOf(Array);
+      const names = body.map((a: any) => a.name);
+      expect(names).toContain('alpha-app');
+      expect(names).toContain('beta-app');
+      expect(names).toContain(ADMIN_APP);
+    });
+
+    it('without operator headers → 403', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/apps',
+        headers: tier1Headers(ADMIN_APP),
+      });
+
+      expect(res.statusCode).toBe(403);
+    });
+  });
+
+  // ─── POST /api/apps ────────────────────────────────────────────────
+
+  describe('POST /api/apps', () => {
+    beforeEach(async () => {
+      await cleanDb();
+      await seedAdminApp();
+    });
+
+    it('creates a new app successfully', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/apps',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: { name: 'brand-new-app' },
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = JSON.parse(res.payload);
+      expect(body.name).toBe('brand-new-app');
+      expect(body.id).toBeDefined();
+      expect(body.isActive).toBe(true);
+    });
+
+    it('duplicate name → 409', async () => {
+      // Create first
+      await app.inject({
+        method: 'POST',
+        url: '/api/apps',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: { name: 'dup-app' },
+      });
+
+      // Create duplicate
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/apps',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: { name: 'dup-app' },
+      });
+
+      expect(res.statusCode).toBe(409);
+    });
+
+    it('missing name → 400', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/apps',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: {},
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('without operator headers → 403', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/apps',
+        headers: tier1Headers(ADMIN_APP),
+        payload: { name: 'test' },
+      });
+
+      expect(res.statusCode).toBe(403);
+    });
+  });
+
+  // ─── GET /api/tokens (admin list) ─────────────────────────────────
+
+  describe('GET /api/tokens', () => {
+    beforeAll(async () => {
+      await cleanDb();
+      await seedAdminApp();
+      await importToken('user1', 'listapp');
+      await importToken('user2', 'listapp');
+      await importToken('user3', 'otherapp');
+    });
+
+    it('returns paginated list', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/tokens',
+        headers: operatorHeaders,
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.payload);
+      expect(body.data).toBeInstanceOf(Array);
+      expect(body.total).toBe(3);
+      expect(body.page).toBe(1);
+      expect(body.limit).toBe(50);
+    });
+
+    it('filter by appName', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/tokens?appName=listapp',
+        headers: operatorHeaders,
+      });
+
+      const body = JSON.parse(res.payload);
+      expect(body.total).toBe(2);
+      body.data.forEach((t: any) => expect(t.app.name).toBe('listapp'));
+    });
+
+    it('filter by userId', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/tokens?userId=user3',
+        headers: operatorHeaders,
+      });
+
+      const body = JSON.parse(res.payload);
+      expect(body.total).toBe(1);
+      expect(body.data[0].userId).toBe('user3');
+    });
+
+    it('filter by status=active', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/tokens?status=active',
+        headers: operatorHeaders,
+      });
+
+      const body = JSON.parse(res.payload);
+      expect(body.total).toBe(3);
+    });
+
+    it('pagination works', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/tokens?page=1&limit=2',
+        headers: operatorHeaders,
+      });
+
+      const body = JSON.parse(res.payload);
+      expect(body.data).toHaveLength(2);
+      expect(body.total).toBe(3);
+      expect(body.page).toBe(1);
+      expect(body.limit).toBe(2);
+    });
+
+    it('without operator headers → 403', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/tokens',
+        headers: tier1Headers(ADMIN_APP),
+      });
+
+      expect(res.statusCode).toBe(403);
+    });
+  });
+
+  // ─── GET /api/tokens/:id ──────────────────────────────────────────
+
+  describe('GET /api/tokens/:id', () => {
+    let tokenId: number;
+
+    beforeAll(async () => {
+      await cleanDb();
+      await seedAdminApp();
+      await importToken('user1', 'detailapp');
+
+      const rows = await dataSource.query(
+        `SELECT id FROM "tokens" WHERE "user_id" = 'user1' LIMIT 1`,
+      );
+      tokenId = rows[0].id;
+    });
+
+    it('returns token detail with computed status', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/tokens/${tokenId}`,
+        headers: operatorHeaders,
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.payload);
+      expect(body.id).toBe(tokenId);
+      expect(body.status).toBe('active');
+      expect(body.userId).toBe('user1');
+      expect(body.app.name).toBe('detailapp');
+      expect(body.tokenPrefix).toBeDefined();
+    });
+
+    it('non-existent id → 404', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/tokens/999999',
+        headers: operatorHeaders,
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('without operator headers → 403', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/tokens/${tokenId}`,
+        headers: tier1Headers(ADMIN_APP),
+      });
+
+      expect(res.statusCode).toBe(403);
+    });
+  });
+
+  // ─── POST /api/tokens/:id/revoke ──────────────────────────────────
+
+  describe('POST /api/tokens/:id/revoke', () => {
+    let tokenId: number;
+    let rawToken: string;
+
+    beforeEach(async () => {
+      await cleanDb();
+      await seedAdminApp();
+      rawToken = await importToken('user1', 'revokeapp');
+
+      const rows = await dataSource.query(
+        `SELECT id FROM "tokens" WHERE "user_id" = 'user1' LIMIT 1`,
+      );
+      tokenId = rows[0].id;
+    });
+
+    it('revokes an active token', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/tokens/${tokenId}/revoke`,
+        headers: operatorHeaders,
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = JSON.parse(res.payload);
+      expect(body.success).toBe(true);
+      expect(body.revokedAt).toBeDefined();
+
+      // Verify token no longer valid
+      const verifyRes = await app.inject({
+        method: 'POST',
+        url: '/api/tokens/verify',
+        headers: tier1Headers('revokeapp'),
+        payload: { token: rawToken, userId: 'user1' },
+      });
+      const verifyBody = JSON.parse(verifyRes.payload);
+      expect(verifyBody.valid).toBe(false);
+      expect(verifyBody.reason).toBe('revoked');
+    });
+
+    it('already revoked → 400', async () => {
+      // Revoke first
+      await app.inject({
+        method: 'POST',
+        url: `/api/tokens/${tokenId}/revoke`,
+        headers: operatorHeaders,
+      });
+
+      // Revoke again
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/tokens/${tokenId}/revoke`,
+        headers: operatorHeaders,
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('non-existent token → 404', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/tokens/999999/revoke',
+        headers: operatorHeaders,
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('without operator headers → 403', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/tokens/${tokenId}/revoke`,
+        headers: tier1Headers(ADMIN_APP),
+      });
+
+      expect(res.statusCode).toBe(403);
+    });
+  });
+
   // ─── Uniqueness Enforcement (E2E) ──────────────────────────────────
 
   describe('Uniqueness Enforcement', () => {
