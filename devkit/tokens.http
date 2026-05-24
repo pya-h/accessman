@@ -1,0 +1,63 @@
+### --------------------------------------------------------
+### Token Endpoints — App-Level (Tier 1)
+### Requires: X-Security, X-App-Name
+### --------------------------------------------------------
+
+### Verify a token
+POST {{$dotenv HOST}}/tokens/verify
+Content-Type: application/json
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: myapp
+
+{
+  "token": "myapp_PASTE_RAW_TOKEN_HERE"
+}
+
+### Update token metadata
+PATCH {{$dotenv HOST}}/tokens/metadata
+Content-Type: application/json
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: myapp
+
+{
+  "token": "myapp_PASTE_RAW_TOKEN_HERE",
+  "metadata": {
+    "role": "admin",
+    "note": "promoted"
+  }
+}
+
+### --------------------------------------------------------
+### Token Endpoints — Operator (Tier 2)
+### Requires: X-Security, X-App-Name (admin), X-Operator-Key
+### --------------------------------------------------------
+
+### List all tokens (paginated)
+GET {{$dotenv HOST}}/tokens?page=1&limit=10
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+### List tokens — filter by app
+GET {{$dotenv HOST}}/tokens?appName=myapp&status=active
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+### List tokens — filter by user
+GET {{$dotenv HOST}}/tokens?userId=user-001
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+### Get token detail by ID
+GET {{$dotenv HOST}}/tokens/1
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+### Revoke a token by ID
+POST {{$dotenv HOST}}/tokens/1/revoke
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}

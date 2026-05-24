@@ -1,12 +1,14 @@
 import {
   CanActivate,
   ExecutionContext,
+  Inject,
   Injectable,
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { ConfigType } from '@nestjs/config';
 import { timingSafeEqual } from 'crypto';
+import securityConfig from '../../config/security.config';
 import { AppsService } from '../../apps/apps.service';
 
 @Injectable()
@@ -14,10 +16,11 @@ export class AppSecurityGuard implements CanActivate {
   private readonly securityKey: string;
 
   constructor(
-    private readonly configService: ConfigService,
+    @Inject(securityConfig.KEY)
+    private readonly security: ConfigType<typeof securityConfig>,
     private readonly appsService: AppsService,
   ) {
-    this.securityKey = this.configService.get<string>('SECURITY_KEY');
+    this.securityKey = this.security.securityKey;
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {

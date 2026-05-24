@@ -1,0 +1,76 @@
+### --------------------------------------------------------
+### Import Endpoints (Operator — Tier 2)
+### Requires: X-Security, X-App-Name (admin), X-Operator-Key
+### --------------------------------------------------------
+
+### Import tokens — JSON body
+POST {{$dotenv HOST}}/import
+Content-Type: application/json
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+[
+  {
+    "userId": "user-001",
+    "appName": "myapp",
+    "expiresAt": "2027-12-31T23:59:59Z"
+  },
+  {
+    "userId": "user-002",
+    "appName": "myapp"
+  }
+]
+
+### Import tokens — CSV body
+POST {{$dotenv HOST}}/import
+Content-Type: text/csv
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+userId,appName,expiresAt
+user-003,myapp,2027-12-31T23:59:59Z
+user-004,myapp,
+
+### Import tokens — per-app (JSON, no appName in items)
+POST {{$dotenv HOST}}/import/myapp
+Content-Type: application/json
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+[
+  {
+    "userId": "user-005",
+    "expiresAt": "2027-12-31T23:59:59Z"
+  },
+  {
+    "userId": "user-006"
+  }
+]
+
+### Import tokens — per-app (CSV, no appName column)
+POST {{$dotenv HOST}}/import/myapp
+Content-Type: text/csv
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+userId,expiresAt
+user-007,2027-12-31T23:59:59Z
+user-008,
+
+### Import — duplicate userId+appName (should return in errors[])
+POST {{$dotenv HOST}}/import
+Content-Type: application/json
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+[
+  {
+    "userId": "user-001",
+    "appName": "myapp"
+  }
+]

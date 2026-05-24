@@ -1,0 +1,32 @@
+### --------------------------------------------------------
+### Apps Endpoints (Operator — Tier 2)
+### Requires: X-Security, X-App-Name (admin), X-Operator-Key
+### --------------------------------------------------------
+
+### List all apps
+GET {{$dotenv HOST}}/apps
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+### Create a new app
+POST {{$dotenv HOST}}/apps
+Content-Type: application/json
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+{
+  "name": "new-app"
+}
+
+### Create duplicate app (should return 409 Conflict)
+POST {{$dotenv HOST}}/apps
+Content-Type: application/json
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+{
+  "name": "new-app"
+}

@@ -1,0 +1,38 @@
+### --------------------------------------------------------
+### Guard Verification — test security rejection
+### Use these to verify guards reject invalid requests
+### --------------------------------------------------------
+
+### Missing X-Security header (should return 401)
+GET {{$dotenv HOST}}/apps
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+### Wrong X-Security key (should return 401)
+GET {{$dotenv HOST}}/apps
+X-Security: wrong-key
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+### Unregistered app name (should return 403)
+GET {{$dotenv HOST}}/apps
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: nonexistent-app
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+### Missing X-Operator-Key on operator endpoint (should return 403)
+GET {{$dotenv HOST}}/apps
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+
+### Wrong X-Operator-Key (should return 403)
+GET {{$dotenv HOST}}/apps
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: wrong-key
+
+### Non-admin app trying operator endpoint (should return 403)
+GET {{$dotenv HOST}}/apps
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: myapp
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}

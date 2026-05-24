@@ -1,20 +1,25 @@
 import {
   CanActivate,
   ExecutionContext,
+  Inject,
   Injectable,
   ForbiddenException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { ConfigType } from '@nestjs/config';
 import { timingSafeEqual } from 'crypto';
+import securityConfig from '../../config/security.config';
 
 @Injectable()
 export class OperatorGuard implements CanActivate {
   private readonly operatorKey: string;
   private readonly adminAppName: string;
 
-  constructor(private readonly configService: ConfigService) {
-    this.operatorKey = this.configService.get<string>('OPERATOR_KEY');
-    this.adminAppName = this.configService.get<string>('ADMIN_APP_NAME');
+  constructor(
+    @Inject(securityConfig.KEY)
+    private readonly security: ConfigType<typeof securityConfig>,
+  ) {
+    this.operatorKey = this.security.operatorKey;
+    this.adminAppName = this.security.adminAppName;
   }
 
   canActivate(context: ExecutionContext): boolean {
