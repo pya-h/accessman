@@ -88,10 +88,6 @@ export class TokensService {
       throw new NotFoundException('Token not found');
     }
 
-    if (token.app.name !== requestingAppName) {
-      throw new NotFoundException('Token not found');
-    }
-
     if (token.revokedAt) {
       throw new BadRequestException('Token is revoked');
     }

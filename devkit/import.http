@@ -61,7 +61,7 @@ userId,expiresAt
 user-007,2027-12-31T23:59:59Z
 user-008,
 
-### Import — duplicate userId+appName (should return in errors[])
+### Import — duplicate userId+appName with active token (should return in errors[])
 POST {{$dotenv HOST}}/import
 Content-Type: application/json
 X-Security: {{$dotenv SECURITY_KEY}}
@@ -71,6 +71,70 @@ X-Operator-Key: {{$dotenv OPERATOR_KEY}}
 [
   {
     "userId": "user-001",
+    "appName": "myapp"
+  }
+]
+
+### Import — re-import after revocation (revoked token should be replaced)
+# First revoke user-001's token via POST /tokens/:id/revoke, then run this
+POST {{$dotenv HOST}}/import
+Content-Type: application/json
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+[
+  {
+    "userId": "user-001",
+    "appName": "myapp"
+  }
+]
+
+### --------------------------------------------------------
+### Re-Issue Endpoint (Operator — Tier 2)
+### Replaces existing tokens (active or revoked) with new ones
+### --------------------------------------------------------
+
+### Re-issue tokens — JSON body
+POST {{$dotenv HOST}}/import/reissue
+Content-Type: application/json
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+[
+  {
+    "userId": "user-001",
+    "appName": "myapp",
+    "expiresAt": "2027-12-31T23:59:59Z"
+  },
+  {
+    "userId": "user-002",
+    "appName": "myapp"
+  }
+]
+
+### Re-issue tokens — CSV body
+POST {{$dotenv HOST}}/import/reissue
+Content-Type: text/csv
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+userId,appName,expiresAt
+user-001,myapp,2027-12-31T23:59:59Z
+user-002,myapp,
+
+### Re-issue — user with no existing token (should work like normal import)
+POST {{$dotenv HOST}}/import/reissue
+Content-Type: application/json
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+[
+  {
+    "userId": "user-new-reissue",
     "appName": "myapp"
   }
 ]
