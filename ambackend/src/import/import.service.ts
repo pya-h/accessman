@@ -54,20 +54,16 @@ export class ImportService {
         const appId = appMap.get(item.appName)!;
 
         const existing = await manager.findOne(TokenEntity, {
-          where: { userId: item.userId, appId },
+          where: { userId: item.userId, appId, revokedAt: null },
         });
 
         if (existing) {
-          if (existing.revokedAt) {
-            await manager.remove(existing);
-          } else {
-            errors.push({
-              userId: item.userId,
-              appName: item.appName,
-              reason: 'Token already exists for this user and app',
-            });
-            continue;
-          }
+          errors.push({
+            userId: item.userId,
+            appName: item.appName,
+            reason: 'Token already exists for this user and app',
+          });
+          continue;
         }
 
         const { raw, hash, prefix } = generateToken(item.appName);
@@ -143,11 +139,12 @@ export class ImportService {
         const appId = appMap.get(item.appName)!;
 
         const existing = await manager.findOne(TokenEntity, {
-          where: { userId: item.userId, appId },
+          where: { userId: item.userId, appId, revokedAt: null },
         });
 
         if (existing) {
-          await manager.remove(existing);
+          existing.revokedAt = new Date();
+          await manager.save(existing);
         }
 
         const { raw, hash, prefix } = generateToken(item.appName);

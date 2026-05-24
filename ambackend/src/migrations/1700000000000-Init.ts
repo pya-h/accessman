@@ -22,8 +22,7 @@ export class Init1700000000000 implements MigrationInterface {
         "expires_at" TIMESTAMP,
         "revoked_at" TIMESTAMP,
         "created_at" TIMESTAMP NOT NULL DEFAULT NOW(),
-        "updated_at" TIMESTAMP NOT NULL DEFAULT NOW(),
-        UNIQUE ("user_id", "app_id")
+        "updated_at" TIMESTAMP NOT NULL DEFAULT NOW()
       )
     `);
 
