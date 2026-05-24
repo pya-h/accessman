@@ -169,9 +169,9 @@ describe('TokensService', () => {
     it('throws NotFoundException for wrong app prefix', async () => {
       const { raw } = generateToken('other-app');
 
-      await expect(
-        service.updateMetadata(raw, APP_NAME, {}),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.updateMetadata(raw, APP_NAME, {})).rejects.toThrow(
+        NotFoundException,
+      );
       expect(repo.findOne).not.toHaveBeenCalled();
     });
 
@@ -184,9 +184,9 @@ describe('TokensService', () => {
         }),
       );
 
-      await expect(
-        service.updateMetadata(raw, APP_NAME, {}),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.updateMetadata(raw, APP_NAME, {})).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws BadRequestException for revoked token', async () => {
@@ -195,18 +195,18 @@ describe('TokensService', () => {
         mockToken({ tokenHash: hash, revokedAt: new Date() }),
       );
 
-      await expect(
-        service.updateMetadata(raw, APP_NAME, {}),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.updateMetadata(raw, APP_NAME, {})).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws NotFoundException for non-existent token', async () => {
       const { raw } = generateToken(APP_NAME);
       repo.findOne.mockResolvedValue(null);
 
-      await expect(
-        service.updateMetadata(raw, APP_NAME, {}),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.updateMetadata(raw, APP_NAME, {})).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

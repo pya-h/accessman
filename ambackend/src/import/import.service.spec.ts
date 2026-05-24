@@ -19,9 +19,7 @@ describe('ImportService', () => {
       findOne: jest.fn(),
       create: jest.fn((_, data) => ({ ...data })),
       save: jest.fn((entity) =>
-        Promise.resolve(
-          entity.id ? entity : { ...entity, id: nextId++ },
-        ),
+        Promise.resolve(entity.id ? entity : { ...entity, id: nextId++ }),
       ),
     };
 
@@ -143,10 +141,7 @@ describe('ImportService', () => {
         .mockResolvedValueOnce({ id: 1, name: 'myapp' })
         .mockResolvedValueOnce(null);
 
-      await service.importTokens(
-        [{ userId: 'user1', appName: 'myapp' }],
-        365,
-      );
+      await service.importTokens([{ userId: 'user1', appName: 'myapp' }], 365);
 
       const tokenFindCall = mockManager.findOne.mock.calls[1];
       expect(tokenFindCall[0]).toBe(TokenEntity);
@@ -273,10 +268,7 @@ describe('ImportService', () => {
         .mockResolvedValueOnce({ id: 1, name: 'myapp' })
         .mockResolvedValueOnce(null);
 
-      await service.reIssueTokens(
-        [{ userId: 'user1', appName: 'myapp' }],
-        365,
-      );
+      await service.reIssueTokens([{ userId: 'user1', appName: 'myapp' }], 365);
 
       const tokenFindCall = mockManager.findOne.mock.calls[1];
       expect(tokenFindCall[0]).toBe(TokenEntity);
@@ -297,10 +289,7 @@ describe('ImportService', () => {
         .mockResolvedValueOnce({ id: 1, name: 'myapp' })
         .mockResolvedValueOnce(existingToken);
 
-      await service.reIssueTokens(
-        [{ userId: 'user1', appName: 'myapp' }],
-        365,
-      );
+      await service.reIssueTokens([{ userId: 'user1', appName: 'myapp' }], 365);
 
       // First save: revoke existing
       const firstSave = mockManager.save.mock.calls[0][0];

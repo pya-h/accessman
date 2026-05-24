@@ -8,6 +8,7 @@
  *
  * Run: npm run test:e2e
  */
+import { createHash } from 'crypto';
 import { Test } from '@nestjs/testing';
 import {
   FastifyAdapter,
@@ -60,10 +61,7 @@ describe('AccessMan E2E', () => {
     );
   }
 
-  async function importToken(
-    userId: string,
-    appName: string,
-  ): Promise<string> {
+  async function importToken(userId: string, appName: string): Promise<string> {
     const res = await app.inject({
       method: 'POST',
       url: '/api/import',
@@ -304,10 +302,7 @@ describe('AccessMan E2E', () => {
       const token = await importToken('user1', 'revapp');
 
       // Revoke by setting revokedAt directly
-      const hash = require('crypto')
-        .createHash('sha256')
-        .update(token)
-        .digest('hex');
+      const hash = createHash('sha256').update(token).digest('hex');
       await dataSource.query(
         `UPDATE "tokens" SET "revoked_at" = NOW() WHERE "token_hash" = $1`,
         [hash],
@@ -420,10 +415,7 @@ describe('AccessMan E2E', () => {
       expect(newToken).not.toBe(oldToken);
 
       // Verify old token is revoked
-      const hash = require('crypto')
-        .createHash('sha256')
-        .update(oldToken)
-        .digest('hex');
+      const hash = createHash('sha256').update(oldToken).digest('hex');
       const oldRecord = await dataSource.query(
         `SELECT * FROM "tokens" WHERE "token_hash" = $1`,
         [hash],
@@ -477,7 +469,7 @@ describe('AccessMan E2E', () => {
         payload: { token: rawToken, userId: 'user1' },
       });
 
-      expect(res.statusCode).toBe(201); // POST returns 201 in NestJS
+      expect(res.statusCode).toBe(200);
       const body = JSON.parse(res.payload);
       expect(body.valid).toBe(true);
       expect(body.userId).toBe('user1');
@@ -502,10 +494,7 @@ describe('AccessMan E2E', () => {
     it('expired token → valid: false, reason: expired', async () => {
       // Import a token then expire it
       const expToken = await importToken('expuser', testApp);
-      const hash = require('crypto')
-        .createHash('sha256')
-        .update(expToken)
-        .digest('hex');
+      const hash = createHash('sha256').update(expToken).digest('hex');
       await dataSource.query(
         `UPDATE "tokens" SET "expires_at" = '2020-01-01' WHERE "token_hash" = $1`,
         [hash],
@@ -525,10 +514,7 @@ describe('AccessMan E2E', () => {
 
     it('revoked token → valid: false, reason: revoked', async () => {
       const revToken = await importToken('revuser', testApp);
-      const hash = require('crypto')
-        .createHash('sha256')
-        .update(revToken)
-        .digest('hex');
+      const hash = createHash('sha256').update(revToken).digest('hex');
       await dataSource.query(
         `UPDATE "tokens" SET "revoked_at" = NOW() WHERE "token_hash" = $1`,
         [hash],
@@ -624,10 +610,7 @@ describe('AccessMan E2E', () => {
 
     it('revoked token → rejected', async () => {
       const revToken = await importToken('revmeta', testApp);
-      const hash = require('crypto')
-        .createHash('sha256')
-        .update(revToken)
-        .digest('hex');
+      const hash = createHash('sha256').update(revToken).digest('hex');
       await dataSource.query(
         `UPDATE "tokens" SET "revoked_at" = NOW() WHERE "token_hash" = $1`,
         [hash],
@@ -645,10 +628,7 @@ describe('AccessMan E2E', () => {
 
     it('expired token → rejected', async () => {
       const expToken = await importToken('expmeta', testApp);
-      const hash = require('crypto')
-        .createHash('sha256')
-        .update(expToken)
-        .digest('hex');
+      const hash = createHash('sha256').update(expToken).digest('hex');
       await dataSource.query(
         `UPDATE "tokens" SET "expires_at" = '2020-01-01' WHERE "token_hash" = $1`,
         [hash],
@@ -1009,6 +989,170 @@ describe('AccessMan E2E', () => {
     });
   });
 
+  // ─── Edge Cases (Phase 7) ──────────────────────────────────────────
+
+  describe('Edge Cases', () => {
+    beforeEach(async () => {
+      await cleanDb();
+      await seedAdminApp();
+    });
+
+    it('import with past expiresAt → verification returns expired', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/import',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [
+          { userId: 'pastuser', appName: 'pastapp', expiresAt: '2020-01-01' },
+        ],
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = JSON.parse(res.payload);
+      expect(body.imported).toHaveLength(1);
+      const rawToken = body.imported[0].token;
+
+      // Verify returns expired
+      const verifyRes = await app.inject({
+        method: 'POST',
+        url: '/api/tokens/verify',
+        headers: tier1Headers('pastapp'),
+        payload: { token: rawToken, userId: 'pastuser' },
+      });
+      const verifyBody = JSON.parse(verifyRes.payload);
+      expect(verifyBody.valid).toBe(false);
+      expect(verifyBody.reason).toBe('expired');
+    });
+
+    it('expired token appears in GET /tokens with status=expired', async () => {
+      // Import with past date
+      await app.inject({
+        method: 'POST',
+        url: '/api/import',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [
+          { userId: 'explist', appName: 'explistapp', expiresAt: '2020-01-01' },
+        ],
+      });
+
+      // Get token id
+      const rows = await dataSource.query(
+        `SELECT id FROM "tokens" WHERE "user_id" = 'explist' LIMIT 1`,
+      );
+      const tokenId = rows[0].id;
+
+      // GET /tokens/:id shows status=expired
+      const detailRes = await app.inject({
+        method: 'GET',
+        url: `/api/tokens/${tokenId}`,
+        headers: operatorHeaders,
+      });
+      const detail = JSON.parse(detailRes.payload);
+      expect(detail.status).toBe('expired');
+
+      // GET /tokens?status=expired includes this token
+      const listRes = await app.inject({
+        method: 'GET',
+        url: '/api/tokens?status=expired',
+        headers: operatorHeaders,
+      });
+      const list = JSON.parse(listRes.payload);
+      expect(list.total).toBeGreaterThanOrEqual(1);
+      expect(list.data.some((t: any) => t.id === tokenId)).toBe(true);
+    });
+
+    it('token prefix mismatch → not_found on verify', async () => {
+      const rawToken = await importToken('user1', 'realapp');
+
+      // Verify via a different app name
+      await dataSource.query(
+        `INSERT INTO "apps" ("name") VALUES ('otherapp') ON CONFLICT DO NOTHING`,
+      );
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/tokens/verify',
+        headers: tier1Headers('otherapp'),
+        payload: { token: rawToken, userId: 'user1' },
+      });
+
+      const body = JSON.parse(res.payload);
+      expect(body.valid).toBe(false);
+      expect(body.reason).toBe('not_found');
+    });
+
+    it('import without expiresAt → default expiry applied', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/import',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [{ userId: 'defuser', appName: 'defapp' }],
+      });
+
+      const body = JSON.parse(res.payload);
+      const expiresAt = new Date(body.imported[0].expiresAt);
+      const now = new Date();
+
+      // DEFAULT_TOKEN_EXPIRY_DAYS is set to 365 in beforeAll
+      const diffDays = (expiresAt.getTime() - now.getTime()) / (1000 * 86400);
+      expect(diffDays).toBeGreaterThan(363);
+      expect(diffDays).toBeLessThan(366);
+    });
+
+    it('token_prefix is visible in GET /tokens responses', async () => {
+      await importToken('prefuser', 'prefapp');
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/tokens?appName=prefapp',
+        headers: operatorHeaders,
+      });
+
+      const body = JSON.parse(res.payload);
+      expect(body.data).toHaveLength(1);
+      expect(body.data[0].tokenPrefix).toMatch(/^prefapp_[0-9a-f]{8}$/);
+    });
+
+    it('metadata update on non-existent token → 404', async () => {
+      await dataSource.query(
+        `INSERT INTO "apps" ("name") VALUES ('metanf') ON CONFLICT DO NOTHING`,
+      );
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: '/api/tokens/metadata',
+        headers: tier1Headers('metanf'),
+        payload: {
+          token: `metanf_${'a'.repeat(64)}`,
+          metadata: { x: 1 },
+        },
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('import with missing appName field → 400', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/import',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [{ userId: 'user1' }], // missing appName
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('import with missing userId field → 400', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/import',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [{ appName: 'someapp' }], // missing userId
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+  });
+
   // ─── Uniqueness Enforcement (E2E) ──────────────────────────────────
 
   describe('Uniqueness Enforcement', () => {
@@ -1043,10 +1187,7 @@ describe('AccessMan E2E', () => {
       const token = await importToken('user1', 'uniapp2');
 
       // Revoke
-      const hash = require('crypto')
-        .createHash('sha256')
-        .update(token)
-        .digest('hex');
+      const hash = createHash('sha256').update(token).digest('hex');
       await dataSource.query(
         `UPDATE "tokens" SET "revoked_at" = NOW() WHERE "token_hash" = $1`,
         [hash],
@@ -1068,12 +1209,12 @@ describe('AccessMan E2E', () => {
         `SELECT * FROM "tokens" WHERE "user_id" = 'user1'`,
       );
       expect(allTokens).toHaveLength(2);
-      expect(
-        allTokens.filter((t: any) => t.revoked_at !== null),
-      ).toHaveLength(1);
-      expect(
-        allTokens.filter((t: any) => t.revoked_at === null),
-      ).toHaveLength(1);
+      expect(allTokens.filter((t: any) => t.revoked_at !== null)).toHaveLength(
+        1,
+      );
+      expect(allTokens.filter((t: any) => t.revoked_at === null)).toHaveLength(
+        1,
+      );
     });
 
     it('import → reissue → DB has 1 revoked + 1 active; old fails, new passes verification', async () => {
@@ -1093,12 +1234,12 @@ describe('AccessMan E2E', () => {
         `SELECT * FROM "tokens" WHERE "user_id" = 'user1'`,
       );
       expect(allTokens).toHaveLength(2);
-      expect(
-        allTokens.filter((t: any) => t.revoked_at !== null),
-      ).toHaveLength(1);
-      expect(
-        allTokens.filter((t: any) => t.revoked_at === null),
-      ).toHaveLength(1);
+      expect(allTokens.filter((t: any) => t.revoked_at !== null)).toHaveLength(
+        1,
+      );
+      expect(allTokens.filter((t: any) => t.revoked_at === null)).toHaveLength(
+        1,
+      );
 
       // Old token fails verification
       const oldRes = await app.inject({

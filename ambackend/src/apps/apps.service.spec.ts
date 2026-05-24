@@ -144,8 +144,8 @@ describe('AppsService', () => {
     it('catches DB unique violation and retries findByName', async () => {
       const app = mockApp({ name: 'race-app' });
       repo.findOne
-        .mockResolvedValueOnce(null)       // first findByName → not found
-        .mockResolvedValueOnce(app);       // retry findByName → found
+        .mockResolvedValueOnce(null) // first findByName → not found
+        .mockResolvedValueOnce(app); // retry findByName → found
       repo.save.mockRejectedValue({ code: '23505' });
 
       const result = await service.findOrCreate('race-app');

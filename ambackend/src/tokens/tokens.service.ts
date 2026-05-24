@@ -4,13 +4,10 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, Not, LessThanOrEqual, Brackets } from 'typeorm';
+import { Repository, Brackets } from 'typeorm';
 import { TokenEntity } from './token.entity';
 import { hashToken, extractAppName } from './token.utils';
-import {
-  ListTokensQueryDto,
-  TokenStatus,
-} from './dto/list-tokens-query.dto';
+import { ListTokensQueryDto, TokenStatus } from './dto/list-tokens-query.dto';
 
 @Injectable()
 export class TokensService {
@@ -106,9 +103,12 @@ export class TokensService {
     return { success: true };
   }
 
-  async findAll(
-    query: ListTokensQueryDto,
-  ): Promise<{ data: TokenEntity[]; total: number; page: number; limit: number }> {
+  async findAll(query: ListTokensQueryDto): Promise<{
+    data: TokenEntity[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 50;
 

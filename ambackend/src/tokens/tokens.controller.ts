@@ -8,6 +8,7 @@ import {
   Body,
   UseGuards,
   ParseIntPipe,
+  HttpCode,
 } from '@nestjs/common';
 import { TokensService } from './tokens.service';
 import { VerifyTokenDto } from './dto/verify-token.dto';
@@ -24,6 +25,7 @@ export class TokensController {
 
   @UseGuards(AppSecurityGuard)
   @Post('verify')
+  @HttpCode(200)
   async verify(@Body() dto: VerifyTokenDto, @RequestApp() app: AppEntity) {
     return this.tokensService.verify(dto.token, app.name, dto.userId);
   }
