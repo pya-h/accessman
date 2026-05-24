@@ -1,0 +1,12 @@
+node_modules
+dist
+*.md
+.git
+.gitignore
+coverage
+devkit
+specs
+ambackend/node_modules
+ambackend/dist
+ambackend/coverage
+ambackend/test
