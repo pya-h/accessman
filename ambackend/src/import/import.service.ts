@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, IsNull } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { parse } from 'csv-parse/sync';
@@ -54,7 +54,7 @@ export class ImportService {
         const appId = appMap.get(item.appName)!;
 
         const existing = await manager.findOne(TokenEntity, {
-          where: { userId: item.userId, appId, revokedAt: null },
+          where: { userId: item.userId, appId, revokedAt: IsNull() },
         });
 
         if (existing) {
@@ -139,7 +139,7 @@ export class ImportService {
         const appId = appMap.get(item.appName)!;
 
         const existing = await manager.findOne(TokenEntity, {
-          where: { userId: item.userId, appId, revokedAt: null },
+          where: { userId: item.userId, appId, revokedAt: IsNull() },
         });
 
         if (existing) {
