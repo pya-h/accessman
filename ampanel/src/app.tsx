@@ -10,12 +10,9 @@ import { TokenDetailPage } from '@/pages/tokens/token-detail';
 import { AppListPage } from '@/pages/apps/app-list';
 import { ImportPage } from '@/pages/import/import';
 import { ImportResultsPage } from '@/pages/import/import-results';
+import { SettingsPage } from '@/pages/settings/settings';
 
 applySettings(getSettings());
-
-function SettingsPage() {
-  return <div><h2>Settings</h2></div>;
-}
 
 function AuthenticatedRoutes() {
   return (

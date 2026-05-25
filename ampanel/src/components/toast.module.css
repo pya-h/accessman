@@ -54,6 +54,28 @@
   flex: 1;
 }
 
+.closeBtn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  font-size: 0.75rem;
+  border-radius: var(--border-radius);
+  padding: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.closeBtn:hover {
+  opacity: 1;
+}
+
 @keyframes slideIn {
   from {
     opacity: 0;

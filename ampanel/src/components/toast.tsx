@@ -62,6 +62,13 @@ export function ToastContainer() {
             {toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : '⚠'}
           </span>
           <span class={styles.message}>{toast.message}</span>
+          <button
+            class={styles.closeBtn}
+            onClick={(e) => { e.stopPropagation(); dismissToast(toast.id); }}
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
         </div>
       ))}
     </div>

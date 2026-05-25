@@ -44,7 +44,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
   const headers: Record<string, string> = {
     'X-Security': creds.securityKey,
-    'X-App-Name': 'am-panel',
+    'X-App-Name': import.meta.env.VITE_ADMIN_APP_NAME || 'am-panel',
     'X-Operator-Key': creds.operatorKey,
   };
 
