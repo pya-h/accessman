@@ -1404,12 +1404,46 @@ describe('AccessMan E2E', () => {
       expect(res.statusCode).toBe(400);
     });
 
-    it('import with missing userId field → 400', async () => {
+    it('import without userId → auto-generates UUID', async () => {
       const res = await app.inject({
         method: 'POST',
         url: '/api/import',
         headers: { ...operatorHeaders, 'content-type': 'application/json' },
-        payload: [{ appName: 'someapp' }], // missing userId
+        payload: [{ appName: 'autoidapp' }],
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = JSON.parse(res.payload);
+      expect(body.imported).toHaveLength(1);
+      expect(body.imported[0].userId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      );
+      expect(body.imported[0].appName).toBe('autoidapp');
+      expect(body.imported[0].token).toMatch(/^autoidapp_/);
+    });
+
+    it('per-app import without userId → auto-generates UUID', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/import/peruidapp',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [{}],
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = JSON.parse(res.payload);
+      expect(body.imported).toHaveLength(1);
+      expect(body.imported[0].userId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      );
+    });
+
+    it('reissue with missing userId → 400', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/import/reissue',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [{ appName: 'someapp' }], // missing userId — required for reissue
       });
 
       expect(res.statusCode).toBe(400);

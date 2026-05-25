@@ -61,6 +61,61 @@ userId,expiresAt
 user-007,2027-12-31T23:59:59Z
 user-008,
 
+### Import tokens — without userId (auto-generated UUID)
+POST {{$dotenv HOST}}/import
+Content-Type: application/json
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+[
+  {
+    "appName": "myapp",
+    "expiresAt": "2027-12-31T23:59:59Z"
+  },
+  {
+    "appName": "myapp"
+  }
+]
+
+### Import tokens — per-app without userId (auto-generated UUID)
+POST {{$dotenv HOST}}/import/myapp
+Content-Type: application/json
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+[
+  {},
+  {
+    "expiresAt": "2027-12-31T23:59:59Z"
+  }
+]
+
+### Import tokens — CSV without userId (auto-generated UUID)
+POST {{$dotenv HOST}}/import
+Content-Type: text/csv
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+appName,expiresAt
+myapp,2027-12-31T23:59:59Z
+myapp,
+
+### Re-issue without userId → should fail (400) — userId is required for reissue
+POST {{$dotenv HOST}}/import/reissue
+Content-Type: application/json
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+[
+  {
+    "appName": "myapp"
+  }
+]
+
 ### Import — duplicate userId+appName with active token (should return in errors[])
 POST {{$dotenv HOST}}/import
 Content-Type: application/json

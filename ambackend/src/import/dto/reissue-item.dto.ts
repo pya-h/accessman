@@ -5,11 +5,10 @@ import {
   IsDateString,
 } from 'class-validator';
 
-export class ImportItemDto {
-  @IsOptional()
+export class ReissueItemDto {
   @IsString()
   @IsNotEmpty()
-  userId?: string;
+  userId: string;
 
   @IsString()
   @IsNotEmpty()

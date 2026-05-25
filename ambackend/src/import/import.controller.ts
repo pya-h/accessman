@@ -10,6 +10,7 @@ import { FastifyRequest } from 'fastify';
 import { ImportService } from './import.service';
 import { ImportItemDto } from './dto/import-item.dto';
 import { ImportItemPerAppDto } from './dto/import-item-per-app.dto';
+import { ReissueItemDto } from './dto/reissue-item.dto';
 import { AppSecurityGuard } from '../common/guards/app-security.guard';
 import { OperatorGuard } from '../common/guards/operator.guard';
 
@@ -35,7 +36,7 @@ export class ImportController {
     const items = this.importService.resolveItems(
       contentType,
       body,
-      ImportItemDto,
+      ReissueItemDto,
     );
     return this.importService.reIssueTokens(items);
   }

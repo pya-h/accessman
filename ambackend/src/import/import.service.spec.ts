@@ -7,6 +7,7 @@ import { ImportService } from './import.service';
 import { AppEntity } from '../apps/app.entity';
 import { TokenEntity } from '../tokens/token.entity';
 import { ImportItemDto } from './dto/import-item.dto';
+import { ReissueItemDto } from './dto/reissue-item.dto';
 import { hashToken } from '../tokens/token.utils';
 
 describe('ImportService', () => {
@@ -115,6 +116,36 @@ describe('ImportService', () => {
       expect(mockManager.create).toHaveBeenCalledWith(AppEntity, {
         name: 'newapp',
       });
+    });
+
+    it('auto-generates UUID when userId is omitted', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce({ id: 1, name: 'myapp' })
+        .mockResolvedValueOnce(null);
+
+      const result = await service.importTokens(
+        [{ appName: 'myapp' }],
+      );
+
+      expect(result.imported).toHaveLength(1);
+      expect(result.errors).toHaveLength(0);
+      expect(result.imported[0].userId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      );
+      expect(result.imported[0].appName).toBe('myapp');
+    });
+
+    it('uses provided userId when given', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce({ id: 1, name: 'myapp' })
+        .mockResolvedValueOnce(null);
+
+      const result = await service.importTokens(
+        [{ userId: 'explicit-user', appName: 'myapp' }],
+      );
+
+      expect(result.imported).toHaveLength(1);
+      expect(result.imported[0].userId).toBe('explicit-user');
     });
 
     it('uses custom expiresAt when provided', async () => {
@@ -548,6 +579,22 @@ describe('ImportService', () => {
       const body = [{ userId: '', appName: '' }];
       expect(() =>
         service.resolveItems('application/json', body, ImportItemDto),
+      ).toThrow(BadRequestException);
+    });
+
+    it('accepts ImportItemDto without userId (optional)', () => {
+      const body = [{ appName: 'myapp' }];
+      const result = service.resolveItems('application/json', body, ImportItemDto);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].userId).toBeUndefined();
+      expect(result[0].appName).toBe('myapp');
+    });
+
+    it('throws on ReissueItemDto without userId (required)', () => {
+      const body = [{ appName: 'myapp' }];
+      expect(() =>
+        service.resolveItems('application/json', body, ReissueItemDto),
       ).toThrow(BadRequestException);
     });
   });

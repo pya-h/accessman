@@ -6,9 +6,10 @@ import {
 } from 'class-validator';
 
 export class ImportItemPerAppDto {
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  userId: string;
+  userId?: string;
 
   @IsOptional()
   @IsDateString()

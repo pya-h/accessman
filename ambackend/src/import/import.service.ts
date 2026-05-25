@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { DataSource, IsNull } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
@@ -17,7 +18,7 @@ export class ImportService {
 
   async importTokens(
     items: {
-      userId: string;
+      userId?: string;
       appName: string;
       expiresAt?: string;
       token?: string;
@@ -59,15 +60,16 @@ export class ImportService {
 
       // Process each item
       for (const item of items) {
+        const userId = item.userId || randomUUID();
         const appId = appMap.get(item.appName)!;
 
         const existing = await manager.findOne(TokenEntity, {
-          where: { userId: item.userId, appId, revokedAt: IsNull() },
+          where: { userId, appId, revokedAt: IsNull() },
         });
 
         if (existing) {
           errors.push({
-            userId: item.userId,
+            userId,
             appName: item.appName,
             reason: 'Token already exists for this user and app',
           });
@@ -80,7 +82,7 @@ export class ImportService {
           const validationError = validateCustomToken(item.token, item.appName);
           if (validationError) {
             errors.push({
-              userId: item.userId,
+              userId,
               appName: item.appName,
               reason: validationError,
             });
@@ -98,7 +100,7 @@ export class ImportService {
           });
           if (hashExists) {
             errors.push({
-              userId: item.userId,
+              userId,
               appName: item.appName,
               reason: 'Token already exists (duplicate token value)',
             });
@@ -111,7 +113,7 @@ export class ImportService {
         const expiresAt = item.expiresAt ? new Date(item.expiresAt) : null;
 
         const token = manager.create(TokenEntity, {
-          userId: item.userId,
+          userId,
           appId,
           tokenHash: hash,
           tokenPrefix: prefix,
@@ -121,7 +123,7 @@ export class ImportService {
         await manager.save(token);
 
         imported.push({
-          userId: item.userId,
+          userId,
           appName: item.appName,
           token: raw,
           expiresAt,

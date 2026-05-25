@@ -9,20 +9,43 @@ interface FormatTemplateProps {
 
 interface FieldDef {
   name: string;
-  type: string;
   required: boolean;
+  example: string;
+  note: string;
 }
 
-function getFields(scope: 'all' | 'single'): FieldDef[] {
+function getFields(scope: 'all' | 'single', mode: ImportMode): FieldDef[] {
   const fields: FieldDef[] = [
-    { name: 'userId', type: 'string', required: true },
+    {
+      name: 'userId',
+      required: mode === 'reissue',
+      example: 'user-123',
+      note: mode === 'reissue'
+        ? 'required for reissue'
+        : 'optional — auto-generated UUID if omitted',
+    },
   ];
   if (scope === 'all') {
-    fields.push({ name: 'appName', type: 'string', required: true });
+    fields.push({
+      name: 'appName',
+      required: true,
+      example: 'myapp',
+      note: 'registered or auto-created',
+    });
   }
   fields.push(
-    { name: 'expiresAt', type: 'ISO date', required: false },
-    { name: 'token', type: 'string 8-64 chars', required: false },
+    {
+      name: 'expiresAt',
+      required: false,
+      example: '2027-12-31T23:59:59Z',
+      note: 'ISO 8601 date — no expiry if omitted',
+    },
+    {
+      name: 'token',
+      required: false,
+      example: scope === 'all' ? 'myapp_CustomSecretToken01' : '{appName}_CustomSecretToken01',
+      note: 'auto-generated if omitted. Format: {appName}_{CODE}, CODE is 8–64 chars',
+    },
   );
   return fields;
 }
@@ -33,11 +56,11 @@ function JsonTemplate({ fields }: { fields: FieldDef[] }) {
       {'[\n  {\n'}
       {fields.map((f, i) => (
         <span key={f.name}>
-          {'    '}<span class={styles.key}>"{f.name}"</span>: <span class={styles.str}>"{f.type}"</span>
+          {'    '}<span class={styles.key}>"{f.name}"</span>: <span class={styles.str}>"{f.example}"</span>
           {i < fields.length - 1 ? ',' : ''}
           {' '}
           <span class={f.required ? styles.comment : `${styles.comment} ${styles.optional}`}>
-            {'// '}{f.required ? <span class={styles.required}>*required</span> : 'optional'}
+            {'// '}{f.required ? <><span class={styles.required}>*required</span> — {f.note}</> : f.note}
           </span>
           {'\n'}
         </span>
@@ -48,19 +71,6 @@ function JsonTemplate({ fields }: { fields: FieldDef[] }) {
 }
 
 function CsvTemplate({ fields }: { fields: FieldDef[] }) {
-  const headerAnnotations = fields.map(
-    (f) => `${f.name}${f.required ? ' *' : ''}`,
-  );
-  const exampleValues = fields.map((f) => {
-    switch (f.name) {
-      case 'userId': return 'user123';
-      case 'appName': return 'myapp';
-      case 'expiresAt': return '2025-12-31T00:00:00Z';
-      case 'token': return 'custom_tok';
-      default: return '...';
-    }
-  });
-
   return (
     <div class={styles.code}>
       <span class={styles.comment}>{'// Header row'}{'\n'}</span>
@@ -73,19 +83,23 @@ function CsvTemplate({ fields }: { fields: FieldDef[] }) {
       ))}
       {'\n'}
       <span class={styles.comment}>{'// Example row'}{'\n'}</span>
-      <span class={styles.str}>{exampleValues.join(',')}</span>
+      <span class={styles.str}>{fields.map((f) => f.example).join(',')}</span>
       {'\n\n'}
-      <span class={styles.comment}>
-        <span class={styles.required}>*</span> required
-        {'  '}
-        <span class={styles.optional}>unmarked = optional</span>
-      </span>
+      {fields.map((f) => (
+        <span key={f.name}>
+          <span class={styles.comment}>
+            {f.required ? <span class={styles.required}>*</span> : ' '}{' '}
+            <span class={styles.key}>{f.name}</span>: {f.note}
+          </span>
+          {'\n'}
+        </span>
+      ))}
     </div>
   );
 }
 
 export function FormatTemplate({ format, mode, scope }: FormatTemplateProps) {
-  const fields = getFields(scope);
+  const fields = getFields(scope, mode);
 
   return (
     <div class={styles.card}>
