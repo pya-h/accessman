@@ -19,26 +19,42 @@
   z-index: 20;
 }
 
-.logo {
-  font-size: 1.0625rem;
-  font-weight: 800;
-  padding: var(--space-2) var(--space-4);
-  margin-bottom: var(--space-6);
-  color: var(--color-text-primary);
-  letter-spacing: -0.03em;
+.logoWrap {
+  padding: var(--space-1) var(--space-3);
+  margin: 0 var(--space-2) var(--space-6);
   display: flex;
   align-items: center;
   gap: var(--space-2);
 }
 
-.logo::before {
-  content: '';
+.logoDot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--color-accent);
   box-shadow: 0 0 8px color-mix(in srgb, var(--color-accent) 50%, transparent);
   animation: logoPulse 3s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.logoText {
+  font-size: 1.0625rem;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  letter-spacing: -0.03em;
+}
+
+.logoVersion {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  padding: 1px 6px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  margin-left: auto;
 }
 
 @keyframes logoPulse {
@@ -327,6 +343,12 @@
 
   .bottomNavItemActive {
     color: var(--color-accent);
+  }
+
+  .bottomNavIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .bottomNavItemActive::after {

@@ -1,4 +1,6 @@
+import { useState } from 'preact/hooks';
 import type { ImportFormat, ImportMode } from '@/api/import';
+import { IconCopy, IconCheck } from '@/components/icons';
 import styles from './format-template.module.css';
 
 interface FormatTemplateProps {
@@ -7,14 +9,14 @@ interface FormatTemplateProps {
   scope: 'all' | 'single';
 }
 
-interface FieldDef {
+export interface FieldDef {
   name: string;
   required: boolean;
   example: string;
   note: string;
 }
 
-function getFields(scope: 'all' | 'single', mode: ImportMode): FieldDef[] {
+export function getFields(scope: 'all' | 'single', mode: ImportMode): FieldDef[] {
   const fields: FieldDef[] = [
     {
       name: 'userId',
@@ -48,6 +50,17 @@ function getFields(scope: 'all' | 'single', mode: ImportMode): FieldDef[] {
     },
   );
   return fields;
+}
+
+function buildTemplateText(format: ImportFormat, fields: FieldDef[]): string {
+  if (format === 'json') {
+    const obj: Record<string, string> = {};
+    for (const f of fields) obj[f.name] = f.example;
+    return JSON.stringify([obj], null, 2);
+  }
+  const header = fields.map(f => f.name).join(',');
+  const row = fields.map(f => f.example).join(',');
+  return `${header}\n${row}`;
 }
 
 function JsonTemplate({ fields }: { fields: FieldDef[] }) {
@@ -100,23 +113,42 @@ function CsvTemplate({ fields }: { fields: FieldDef[] }) {
 
 export function FormatTemplate({ format, mode, scope }: FormatTemplateProps) {
   const fields = getFields(scope, mode);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    const text = buildTemplateText(format, fields);
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div class={styles.card}>
       <div class={styles.header}>
         <span class={styles.headerTitle}>Input Template</span>
-        {mode === 'reissue' && (
-          <span class={styles.reissueBadge}>
-            existing tokens for these users will be revoked
-          </span>
-        )}
+        <div class={styles.headerActions}>
+          {mode === 'reissue' && (
+            <span class={styles.reissueBadge}>
+              existing tokens will be revoked
+            </span>
+          )}
+          <button
+            class={`${styles.copyBtn} ${copied ? styles.copyBtnDone : ''}`}
+            onClick={handleCopy}
+            title="Copy template"
+          >
+            {copied ? <><IconCheck size={12} /> Copied</> : <><IconCopy size={12} /> Copy</>}
+          </button>
+        </div>
       </div>
       <div class={styles.body}>
-        {format === 'json' ? (
-          <JsonTemplate fields={fields} />
-        ) : (
-          <CsvTemplate fields={fields} />
-        )}
+        <div key={`${format}-${mode}-${scope}`} class={styles.bodyContent}>
+          {format === 'json' ? (
+            <JsonTemplate fields={fields} />
+          ) : (
+            <CsvTemplate fields={fields} />
+          )}
+        </div>
       </div>
     </div>
   );

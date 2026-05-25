@@ -13,6 +13,7 @@
   --color-status-active: #16a34a;
   --color-status-expired: #ca8a04;
   --color-status-revoked: #dc2626;
+  --color-status-revoked-hover: #b91c1c;
 
   /* Spacing (4px grid) */
   --space-1: 4px;
@@ -64,6 +65,7 @@
   --color-accent: #3b82f6;
   --color-accent-hover: #2563eb;
   --color-accent-subtle: color-mix(in srgb, #3b82f6 10%, transparent);
+  --color-status-revoked-hover: #ef4444;
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.2);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.25);
@@ -84,6 +86,7 @@
     --color-accent: #3b82f6;
     --color-accent-hover: #2563eb;
     --color-accent-subtle: color-mix(in srgb, #3b82f6 10%, transparent);
+    --color-status-revoked-hover: #ef4444;
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.2);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.25);

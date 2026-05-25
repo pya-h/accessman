@@ -1,10 +1,14 @@
 import { request } from './client';
 
+export type SortableField = 'createdAt' | 'userId' | 'tokenPrefix' | 'expiresAt' | 'appName';
+
 export interface TokenListParams {
   appName?: string;
   userId?: string;
   tokenPrefix?: string;
   status?: 'active' | 'expired' | 'revoked' | 'all';
+  sortBy?: SortableField;
+  sortOrder?: 'ASC' | 'DESC';
   page?: number;
   limit?: number;
 }

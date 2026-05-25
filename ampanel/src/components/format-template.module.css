@@ -12,6 +12,7 @@
   padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg-card);
+  gap: var(--space-2);
 }
 
 .headerTitle {
@@ -19,6 +20,12 @@
   font-weight: 700;
   color: var(--color-text-secondary);
   letter-spacing: 0.01em;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .reissueBadge {
@@ -30,8 +37,47 @@
   color: var(--color-status-expired);
 }
 
+.copyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-bg-page);
+  color: var(--color-text-secondary);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    all var(--transition-normal);
+}
+
+.copyBtn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+.copyBtnDone {
+  border-color: var(--color-status-active);
+  color: var(--color-status-active);
+  background: color-mix(in srgb, var(--color-status-active) 8%, transparent);
+}
+
 .body {
   padding: var(--space-3);
+  position: relative;
+}
+
+@keyframes templateFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.bodyContent {
+  animation: templateFadeIn var(--transition-slow) ease;
 }
 
 .code {

@@ -7,6 +7,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { MetadataViewer } from '@/components/metadata-viewer';
 import { Modal } from '@/components/modal';
 import { showToast } from '@/components/toast';
+import { IconArrowLeft, IconCopy } from '@/components/icons';
 import styles from './token-detail.module.css';
 
 function getTokenStatus(t: { revokedAt: string | null; expiresAt: string | null }): 'active' | 'expired' | 'revoked' {
@@ -59,7 +60,7 @@ export function TokenDetailPage() {
     return (
       <div class={styles.page}>
         <div class={styles.backRow}>
-          <button class={styles.backBtn} onClick={() => route('/tokens')}>← Back</button>
+          <button class={styles.backBtn} onClick={() => route('/tokens')}><IconArrowLeft size={16} /> Back</button>
         </div>
         <p class={styles.loading}>Loading token...</p>
       </div>
@@ -70,7 +71,7 @@ export function TokenDetailPage() {
     return (
       <div class={styles.page}>
         <div class={styles.backRow}>
-          <button class={styles.backBtn} onClick={() => route('/tokens')}>← Back</button>
+          <button class={styles.backBtn} onClick={() => route('/tokens')}><IconArrowLeft size={16} /> Back</button>
         </div>
         <p class={styles.error}>{error || 'Token not found'}</p>
       </div>
@@ -82,7 +83,7 @@ export function TokenDetailPage() {
   return (
     <div class={styles.page}>
       <div class={styles.backRow}>
-        <button class={styles.backBtn} onClick={() => route('/tokens')}>← Back</button>
+        <button class={styles.backBtn} onClick={() => route('/tokens')}><IconArrowLeft size={16} /> Back</button>
         {status === 'active' && (
           <button class={styles.revokeBtn} onClick={() => setShowRevoke(true)}>Revoke</button>
         )}
@@ -154,7 +155,7 @@ function Field({
         {value}
         {copyable && value !== '—' && (
           <button class={styles.copyBtn} onClick={() => copyToClipboard(value)} title="Copy">
-            📋
+            <IconCopy size={13} />
           </button>
         )}
       </dd>

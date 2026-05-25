@@ -1,3 +1,4 @@
+import { IconSearch, IconX } from '@/components/icons';
 import styles from './search-input.module.css';
 
 interface SearchInputProps {
@@ -9,7 +10,7 @@ interface SearchInputProps {
 export function SearchInput({ value, onInput, placeholder }: SearchInputProps) {
   return (
     <div class={styles.wrapper}>
-      <span class={styles.icon}>🔍</span>
+      <span class={styles.icon}><IconSearch size={14} /></span>
       <input
         type="text"
         class={styles.input}
@@ -23,7 +24,7 @@ export function SearchInput({ value, onInput, placeholder }: SearchInputProps) {
           onClick={() => onInput('')}
           aria-label="Clear search"
         >
-          ✕
+          <IconX size={12} />
         </button>
       )}
     </div>

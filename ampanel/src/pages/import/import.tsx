@@ -5,7 +5,11 @@ import type { ImportFormat, ImportMode, ImportResponse } from '@/api/import';
 import { listApps } from '@/api/apps';
 import { useQuery } from '@/lib/use-query';
 import { showToast } from '@/components/toast';
-import { FormatTemplate } from '@/components/format-template';
+import { FormatTemplate, getFields } from '@/components/format-template';
+import { CodeInput } from '@/components/code-input';
+import { Modal } from '@/components/modal';
+import { CustomSelect } from '@/components/custom-select';
+import { IconPlus, IconUpload } from '@/components/icons';
 import styles from './import.module.css';
 
 // In-memory state for passing import results to results page
@@ -14,6 +18,72 @@ export function getLastImportResult(): ImportResponse | null {
   const r = lastImportResult;
   lastImportResult = null;
   return r;
+}
+
+// --- Conversion utilities ---
+
+function parseCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (const ch of line) {
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+function jsonToCsv(jsonStr: string, expectedColumns?: string[]): string | null {
+  try {
+    const arr = JSON.parse(jsonStr);
+    if (!Array.isArray(arr) || arr.length === 0) return null;
+    const keys: string[] = expectedColumns ? [...expectedColumns] : [];
+    for (const obj of arr) {
+      for (const k of Object.keys(obj)) {
+        if (!keys.includes(k)) keys.push(k);
+      }
+    }
+    const header = keys.join(',');
+    const rows = arr.map((obj: Record<string, unknown>) =>
+      keys.map(k => {
+        const v = obj[k] ?? '';
+        const s = String(v);
+        return s.includes(',') || s.includes('"') || s.includes('\n')
+          ? `"${s.replace(/"/g, '""')}"` : s;
+      }).join(',')
+    );
+    return [header, ...rows].join('\n');
+  } catch {
+    return null;
+  }
+}
+
+function csvToJson(csvStr: string): string | null {
+  try {
+    const lines = csvStr.trim().split('\n').filter(l => l.trim());
+    if (lines.length < 1) return null;
+    const headers = parseCsvLine(lines[0]);
+    if (headers.length === 0 || headers.every(h => !h)) return null;
+    const rows = lines.slice(1).map(line => {
+      const values = parseCsvLine(line);
+      const obj: Record<string, string> = {};
+      headers.forEach((h, i) => {
+        const v = values[i];
+        if (v !== undefined && v !== '') obj[h] = v;
+      });
+      return obj;
+    });
+    return JSON.stringify(rows, null, 2);
+  } catch {
+    return null;
+  }
 }
 
 function detectFormat(content: string, fileName?: string): ImportFormat {
@@ -54,9 +124,31 @@ export function ImportPage() {
   const [scope, setScope] = useState<'all' | 'single'>('all');
   const [appName, setAppName] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [addRowOpen, setAddRowOpen] = useState(false);
+  const [rowForm, setRowForm] = useState<Record<string, string>>({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { data: apps } = useQuery(() => listApps(), []);
+
+  const fields = getFields(scope, mode);
+
+  const handleFormatChange = (newFormat: ImportFormat) => {
+    if (newFormat === format) return;
+
+    if (content.trim()) {
+      let converted: string | null = null;
+      if (format === 'json' && newFormat === 'csv') {
+        converted = jsonToCsv(content, fields.map(f => f.name));
+      } else if (format === 'csv' && newFormat === 'json') {
+        converted = csvToJson(content);
+      }
+      if (converted !== null) {
+        setContent(converted);
+        showToast('success', `Converted to ${newFormat.toUpperCase()}`);
+      }
+    }
+    setFormat(newFormat);
+  };
 
   const handleFile = (file: File) => {
     setFileName(file.name);
@@ -66,7 +158,6 @@ export function ImportPage() {
     reader.onload = () => {
       const text = reader.result as string;
       setContent(text);
-      // Re-detect from content if extension didn't give a clear answer
       setFormat(detectFormat(text, file.name));
     };
     reader.onerror = () => {
@@ -86,10 +177,44 @@ export function ImportPage() {
     if (file) handleFile(file);
   };
 
-  const handlePaste = (value: string) => {
-    setContent(value);
-    setFormat(detectFormat(value));
-    setFileName('');
+  const handleAddRow = () => {
+    setRowForm({});
+    setAddRowOpen(true);
+  };
+
+  const handleAddRowSubmit = () => {
+    const cleanRow: Record<string, string> = {};
+    for (const [k, v] of Object.entries(rowForm)) {
+      if (v) cleanRow[k] = v;
+    }
+
+    if (format === 'json') {
+      try {
+        const arr = JSON.parse(content);
+        if (Array.isArray(arr)) {
+          arr.push(cleanRow);
+          setContent(JSON.stringify(arr, null, 2));
+        }
+      } catch {
+        setContent(JSON.stringify([cleanRow], null, 2));
+      }
+    } else {
+      const fieldNames = fields.map(f => f.name);
+      if (!content.trim()) {
+        const header = fieldNames.join(',');
+        const values = fieldNames.map(f => cleanRow[f] || '').join(',');
+        setContent(`${header}\n${values}`);
+      } else {
+        const lines = content.trim().split('\n');
+        const headers = parseCsvLine(lines[0]);
+        const values = headers.map(h => cleanRow[h] || '').join(',');
+        setContent(`${content.trimEnd()}\n${values}`);
+      }
+    }
+
+    setAddRowOpen(false);
+    setRowForm({});
+    setTab('paste');
   };
 
   const handleSubmit = async () => {
@@ -117,30 +242,47 @@ export function ImportPage() {
     <div class={styles.page}>
       <h2 class={styles.title}>Import Tokens</h2>
 
-      {/* Tabs */}
-      <div class={styles.tabs}>
-        <button
-          class={`${styles.tab} ${tab === 'paste' ? styles.tabActive : ''}`}
-          onClick={() => setTab('paste')}
-        >
-          Paste
-        </button>
-        <button
-          class={`${styles.tab} ${tab === 'upload' ? styles.tabActive : ''}`}
-          onClick={() => setTab('upload')}
-        >
-          Upload
-        </button>
+      {/* Tabs row with format toggle */}
+      <div class={styles.tabRow}>
+        <div class={styles.tabs}>
+          <button
+            class={`${styles.tab} ${tab === 'paste' ? styles.tabActive : ''}`}
+            onClick={() => setTab('paste')}
+          >
+            Paste
+          </button>
+          <button
+            class={`${styles.tab} ${tab === 'upload' ? styles.tabActive : ''}`}
+            onClick={() => setTab('upload')}
+          >
+            Upload
+          </button>
+        </div>
+
+        <div class={styles.formatToggle}>
+          <button
+            class={`${styles.formatBtn} ${format === 'json' ? styles.formatBtnActive : ''}`}
+            onClick={() => handleFormatChange('json')}
+          >
+            JSON
+          </button>
+          <button
+            class={`${styles.formatBtn} ${format === 'csv' ? styles.formatBtnActive : ''}`}
+            onClick={() => handleFormatChange('csv')}
+          >
+            CSV
+          </button>
+        </div>
       </div>
 
       {/* Content input */}
       {tab === 'paste' ? (
-        <textarea
-          class={styles.textarea}
-          placeholder={'Paste JSON array or CSV content here...\n\nJSON: [{"userId": "user1", "appName": "myapp"}, ...]\nCSV:\nuserId,appName\nuser1,myapp'}
+        <CodeInput
           value={content}
-          onInput={(e) => handlePaste((e.target as HTMLTextAreaElement).value)}
-          rows={12}
+          onInput={(v) => { setContent(v); setFileName(''); }}
+          placeholder={format === 'json'
+            ? 'Paste JSON array here...\n\n[\n  { "userId": "user1", "appName": "myapp" }\n]'
+            : 'Paste CSV content here...\n\nuserId,appName\nuser1,myapp'}
         />
       ) : (
         <div
@@ -156,6 +298,9 @@ export function ImportPage() {
             class={styles.fileInput}
             onChange={handleFileInput}
           />
+          <div class={styles.dropIcon}>
+            <IconUpload size={24} />
+          </div>
           {fileName ? (
             <p class={styles.dropLabel}>{fileName}</p>
           ) : (
@@ -170,67 +315,99 @@ export function ImportPage() {
       {/* Options */}
       <div class={styles.options}>
         <div class={styles.option}>
-          <label class={styles.optionLabel}>Format</label>
-          <select
-            class={styles.select}
-            value={format}
-            onChange={(e) => setFormat((e.target as HTMLSelectElement).value as ImportFormat)}
-          >
-            <option value="json">JSON</option>
-            <option value="csv">CSV</option>
-          </select>
-        </div>
-
-        <div class={styles.option}>
           <label class={styles.optionLabel}>Mode</label>
-          <select
-            class={styles.select}
+          <CustomSelect
+            fullWidth
             value={mode}
-            onChange={(e) => setMode((e.target as HTMLSelectElement).value as ImportMode)}
-          >
-            <option value="import">Import (new tokens)</option>
-            <option value="reissue">Reissue (revoke + new)</option>
-          </select>
+            options={[
+              { value: 'import', label: 'Import (new tokens)' },
+              { value: 'reissue', label: 'Reissue (revoke + new)' },
+            ]}
+            onChange={(v) => setMode(v as ImportMode)}
+          />
         </div>
 
         <div class={styles.option}>
           <label class={styles.optionLabel}>App Scope</label>
-          <select
-            class={styles.select}
+          <CustomSelect
+            fullWidth
             value={scope}
-            onChange={(e) => setScope((e.target as HTMLSelectElement).value as 'all' | 'single')}
-          >
-            <option value="all">All apps (per-row)</option>
-            <option value="single">Single app</option>
-          </select>
+            options={[
+              { value: 'all', label: 'All apps (per-row)' },
+              { value: 'single', label: 'Single app' },
+            ]}
+            onChange={(v) => setScope(v as 'all' | 'single')}
+          />
         </div>
 
         {scope === 'single' && (
           <div class={styles.option}>
             <label class={styles.optionLabel}>App Name</label>
-            <select
-              class={styles.select}
+            <CustomSelect
+              fullWidth
               value={appName}
-              onChange={(e) => setAppName((e.target as HTMLSelectElement).value)}
-            >
-              <option value="">Select app...</option>
-              {(apps || []).map((a) => (
-                <option key={a.id} value={a.name}>{a.name}</option>
-              ))}
-            </select>
+              options={[
+                { value: '', label: 'Select app...' },
+                ...(apps || []).map((a) => ({ value: a.name, label: a.name })),
+              ]}
+              onChange={setAppName}
+            />
           </div>
         )}
       </div>
 
       <FormatTemplate format={format} mode={mode} scope={scope} />
 
-      <button
-        class={styles.submitBtn}
-        onClick={handleSubmit}
-        disabled={submitting || !content.trim() || (scope === 'single' && !appName)}
+      <div class={styles.buttonRow}>
+        <button class={styles.addRowBtn} onClick={handleAddRow} type="button">
+          <IconPlus size={14} /> Add Row
+        </button>
+        <button
+          class={styles.submitBtn}
+          onClick={handleSubmit}
+          disabled={submitting || !content.trim() || (scope === 'single' && !appName)}
+        >
+          {submitting ? 'Importing...' : mode === 'reissue' ? 'Reissue Tokens' : 'Import Tokens'}
+        </button>
+      </div>
+
+      {/* Add Row Modal */}
+      <Modal
+        open={addRowOpen}
+        onClose={() => setAddRowOpen(false)}
+        title="Add Row"
+        actions={
+          <>
+            <button class={styles.cancelBtn} onClick={() => setAddRowOpen(false)}>
+              Cancel
+            </button>
+            <button class={styles.addBtn} onClick={handleAddRowSubmit}>
+              Add
+            </button>
+          </>
+        }
       >
-        {submitting ? 'Importing...' : mode === 'reissue' ? 'Reissue Tokens' : 'Import Tokens'}
-      </button>
+        <div class={styles.modalFields}>
+          {fields.map((f) => (
+            <label key={f.name} class={styles.modalField}>
+              <span class={styles.modalLabel}>
+                {f.name}
+                {f.required && <span class={styles.modalRequired}> *</span>}
+              </span>
+              <input
+                type="text"
+                class={styles.modalInput}
+                placeholder={f.example}
+                value={rowForm[f.name] || ''}
+                onInput={(e) =>
+                  setRowForm({ ...rowForm, [f.name]: (e.target as HTMLInputElement).value })
+                }
+              />
+              <span class={styles.modalHint}>{f.note}</span>
+            </label>
+          ))}
+        </div>
+      </Modal>
     </div>
   );
 }

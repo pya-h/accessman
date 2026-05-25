@@ -46,6 +46,22 @@ export function ImportResultsPage() {
     );
   };
 
+  const handleDownloadJson = () => {
+    const data = imported.map((t) => ({
+      userId: t.userId,
+      appName: t.appName,
+      token: t.token,
+      expiresAt: t.expiresAt ?? '',
+    }));
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'imported-tokens.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const tokenColumns: Column<ImportedToken>[] = useMemo(() => [
     { key: 'userId', header: 'User ID', render: (t) => t.userId },
     { key: 'appName', header: 'App', render: (t) => t.appName },
@@ -97,6 +113,9 @@ export function ImportResultsPage() {
                 </button>
                 <button class={styles.actionBtn} onClick={handleDownloadCsv}>
                   Download CSV
+                </button>
+                <button class={styles.actionBtn} onClick={handleDownloadJson}>
+                  Download JSON
                 </button>
               </div>
               <DataTable columns={tokenColumns} data={imported} emptyMessage="No tokens imported" />

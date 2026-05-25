@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
+import { IconX } from '@/components/icons';
 import styles from './modal.module.css';
 
 interface ModalProps {
@@ -12,12 +13,27 @@ interface ModalProps {
 
 export function Modal({ open, onClose, title, children, actions }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const prevFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
 
+    prevFocusRef.current = document.activeElement as HTMLElement | null;
+
+    // Auto-focus first input (preferred) or first focusable element
+    requestAnimationFrame(() => {
+      const firstInput = dialogRef.current?.querySelector<HTMLElement>('input, select, textarea');
+      if (firstInput) {
+        firstInput.focus();
+      } else {
+        dialogRef.current?.querySelector<HTMLElement>('button, [href]')?.focus();
+      }
+    });
+
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onCloseRef.current();
 
       if (e.key === 'Tab' && dialogRef.current) {
         const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
@@ -38,14 +54,12 @@ export function Modal({ open, onClose, title, children, actions }: ModalProps) {
     };
 
     document.addEventListener('keydown', handleKey);
-    const prev = document.activeElement as HTMLElement | null;
-    dialogRef.current?.querySelector<HTMLElement>('button, [href], input')?.focus();
 
     return () => {
       document.removeEventListener('keydown', handleKey);
-      prev?.focus();
+      prevFocusRef.current?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
@@ -62,7 +76,7 @@ export function Modal({ open, onClose, title, children, actions }: ModalProps) {
         <div class={styles.header}>
           <h2 class={styles.title}>{title}</h2>
           <button class={styles.closeBtn} onClick={onClose} aria-label="Close">
-            ✕
+            <IconX size={16} />
           </button>
         </div>
         <div class={styles.body}>{children}</div>

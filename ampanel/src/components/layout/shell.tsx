@@ -1,20 +1,21 @@
 import { useState } from 'preact/hooks';
 import { useLocation } from 'preact-iso';
-import type { ComponentChildren } from 'preact';
+import type { ComponentChildren, JSX } from 'preact';
 import { useAuth } from '@/auth/auth-context';
+import { IconKey, IconBox, IconImport, IconSettings, IconLogout, IconMenu, IconX } from '@/components/icons';
 import styles from './shell.module.css';
 
 interface NavItem {
   path: string;
   label: string;
-  icon: string;
+  icon: () => JSX.Element;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { path: '/tokens', label: 'Tokens', icon: '🔑' },
-  { path: '/apps', label: 'Apps', icon: '📦' },
-  { path: '/import', label: 'Import', icon: '📥' },
-  { path: '/settings', label: 'Settings', icon: '⚙' },
+  { path: '/tokens', label: 'Tokens', icon: () => <IconKey size={18} /> },
+  { path: '/apps', label: 'Apps', icon: () => <IconBox size={18} /> },
+  { path: '/import', label: 'Import', icon: () => <IconImport size={18} /> },
+  { path: '/settings', label: 'Settings', icon: () => <IconSettings size={18} /> },
 ];
 
 function isActive(current: string, target: string): boolean {
@@ -47,7 +48,7 @@ export function Shell({ children }: { children: ComponentChildren }) {
         onClick={() => setSidebarOpen(!sidebarOpen)}
         aria-label="Toggle menu"
       >
-        {sidebarOpen ? '✕' : '☰'}
+        {sidebarOpen ? <IconX size={20} /> : <IconMenu size={20} />}
       </button>
 
       {/* Overlay */}
@@ -58,7 +59,11 @@ export function Shell({ children }: { children: ComponentChildren }) {
 
       {/* Sidebar */}
       <aside class={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ''}`}>
-        <div class={styles.logo}>AccessMan</div>
+        <div class={styles.logoWrap}>
+          <span class={styles.logoDot} />
+          <span class={styles.logoText}>AccessMan</span>
+          <span class={styles.logoVersion}>v1</span>
+        </div>
         <nav class={styles.nav}>
           {NAV_ITEMS.map((item) => (
             <button
@@ -66,14 +71,14 @@ export function Shell({ children }: { children: ComponentChildren }) {
               class={`${styles.navLink} ${isActive(currentPath, item.path) ? styles.navLinkActive : ''}`}
               onClick={() => navigate(item.path)}
             >
-              <span class={styles.navIcon}>{item.icon}</span>
+              <span class={styles.navIcon}>{item.icon()}</span>
               {item.label}
             </button>
           ))}
         </nav>
         <div class={styles.sidebarFooter}>
           <button class={styles.logoutBtn} onClick={handleLogout}>
-            <span class={styles.navIcon}>🚪</span>
+            <span class={styles.navIcon}><IconLogout size={18} /></span>
             Logout
           </button>
         </div>
@@ -92,7 +97,7 @@ export function Shell({ children }: { children: ComponentChildren }) {
             class={`${styles.bottomNavItem} ${isActive(currentPath, item.path) ? styles.bottomNavItemActive : ''}`}
             onClick={() => navigate(item.path)}
           >
-            <span style={{ fontSize: '1.25rem' }}>{item.icon}</span>
+            <span class={styles.bottomNavIcon}>{item.icon()}</span>
             {item.label}
           </button>
         ))}

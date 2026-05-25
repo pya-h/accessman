@@ -56,7 +56,7 @@ describe('AppListPage', () => {
     });
 
     // Open form
-    fireEvent.click(screen.getByText('+ Register App'));
+    fireEvent.click(screen.getByText(/Register App/));
 
     // Fill and submit
     const input = screen.getByPlaceholderText('App name');
@@ -81,7 +81,7 @@ describe('AppListPage', () => {
       expect(screen.getByText('myapp')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('+ Register App'));
+    fireEvent.click(screen.getByText(/Register App/));
 
     const input = screen.getByPlaceholderText('App name');
     fireEvent.input(input, { target: { value: 'myapp' } });

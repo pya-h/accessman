@@ -116,12 +116,14 @@ export class TokensService {
     }
 
     if (query.userId) {
-      qb.andWhere('token.userId = :userId', { userId: query.userId });
+      qb.andWhere('token.userId ILIKE :userId', {
+        userId: `%${query.userId}%`,
+      });
     }
 
     if (query.tokenPrefix) {
       qb.andWhere('token.tokenPrefix ILIKE :tokenPrefix', {
-        tokenPrefix: `${query.tokenPrefix}%`,
+        tokenPrefix: `%${query.tokenPrefix}%`,
       });
     }
 
@@ -148,7 +150,13 @@ export class TokensService {
       // 'all' or undefined — no status filter
     }
 
-    qb.orderBy('token.createdAt', 'DESC');
+    const sortOrder = query.sortOrder ?? 'DESC';
+    const sortBy = query.sortBy ?? 'createdAt';
+    if (sortBy === 'appName') {
+      qb.orderBy('app.name', sortOrder);
+    } else {
+      qb.orderBy(`token.${sortBy}`, sortOrder);
+    }
     qb.skip((page - 1) * limit);
     qb.take(limit);
 

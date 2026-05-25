@@ -43,6 +43,29 @@
   }
 }
 
+.logoArea {
+  display: flex;
+  justify-content: center;
+}
+
+.logoIcon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-hover));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-accent) 30%, transparent);
+  animation: logoFloat 3s ease-in-out infinite;
+}
+
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
 .title {
   font-size: 1.5rem;
   font-weight: 700;

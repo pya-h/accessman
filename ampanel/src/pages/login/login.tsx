@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks';
 import { useLocation } from 'preact-iso';
 import { useAuth } from '@/auth/auth-context';
 import type { ApiError } from '@/api/client';
+import { IconShield } from '@/components/icons';
 import styles from './login.module.css';
 
 export function LoginPage() {
@@ -31,6 +32,11 @@ export function LoginPage() {
   return (
     <div class={styles.page}>
       <form class={styles.card} onSubmit={handleSubmit}>
+        <div class={styles.logoArea}>
+          <div class={styles.logoIcon}>
+            <IconShield size={28} />
+          </div>
+        </div>
         <h1 class={styles.title}>AccessMan Panel</h1>
 
         {error && <div class={styles.error}>{error}</div>}

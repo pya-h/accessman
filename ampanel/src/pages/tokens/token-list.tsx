@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'preact/hooks';
 import { useLocation } from 'preact-iso';
 import { listTokens, revokeToken } from '@/api/tokens';
-import type { TokenRecord, TokenListParams } from '@/api/tokens';
+import type { TokenRecord, TokenListParams, SortableField } from '@/api/tokens';
 import { listApps } from '@/api/apps';
 import { useQuery } from '@/lib/use-query';
 import { useDebounce } from '@/lib/use-debounce';
@@ -13,6 +13,8 @@ import { SearchInput } from '@/components/search-input';
 import { StatusBadge } from '@/components/status-badge';
 import { Modal } from '@/components/modal';
 import { showToast } from '@/components/toast';
+import { CustomSelect } from '@/components/custom-select';
+import { IconRefresh, IconSortAsc } from '@/components/icons';
 import styles from './token-list.module.css';
 
 type StatusFilter = 'all' | 'active' | 'expired' | 'revoked';
@@ -30,20 +32,32 @@ function parseQuery(search: string) {
     tokenPrefix: p.get('tokenPrefix') || '',
     appName: p.get('appName') || '',
     status: (p.get('status') || 'all') as StatusFilter,
+    sortBy: (p.get('sortBy') || 'createdAt') as SortableField,
+    sortOrder: (p.get('sortOrder') || 'DESC') as 'ASC' | 'DESC',
     page: Math.max(1, parseInt(p.get('page') || '1', 10) || 1),
   };
 }
 
-function buildSearch(filters: { userId: string; tokenPrefix: string; appName: string; status: StatusFilter; page: number }) {
+function buildSearch(filters: ReturnType<typeof parseQuery>) {
   const p = new URLSearchParams();
   if (filters.userId) p.set('userId', filters.userId);
   if (filters.tokenPrefix) p.set('tokenPrefix', filters.tokenPrefix);
   if (filters.appName) p.set('appName', filters.appName);
   if (filters.status !== 'all') p.set('status', filters.status);
+  if (filters.sortBy !== 'createdAt') p.set('sortBy', filters.sortBy);
+  if (filters.sortOrder !== 'DESC') p.set('sortOrder', filters.sortOrder);
   if (filters.page > 1) p.set('page', String(filters.page));
   const s = p.toString();
   return s ? `?${s}` : '';
 }
+
+const SORT_OPTIONS: { value: SortableField; label: string }[] = [
+  { value: 'createdAt', label: 'Created' },
+  { value: 'userId', label: 'User ID' },
+  { value: 'appName', label: 'App Name' },
+  { value: 'tokenPrefix', label: 'Token' },
+  { value: 'expiresAt', label: 'Expires' },
+];
 
 const LIMIT = 50;
 
@@ -66,13 +80,15 @@ export function TokenListPage() {
     tokenPrefix: debouncedPrefix || undefined,
     appName: q.appName || undefined,
     status: q.status === 'all' ? undefined : q.status,
+    sortBy: q.sortBy,
+    sortOrder: q.sortOrder,
     page: q.page,
     limit: LIMIT,
   };
 
   const { data: tokenData, loading, refetch } = useQuery(
     () => listTokens(params),
-    [debouncedUserId, debouncedPrefix, q.appName, q.status, q.page],
+    [debouncedUserId, debouncedPrefix, q.appName, q.status, q.sortBy, q.sortOrder, q.page],
   );
 
   const { data: apps } = useQuery(() => listApps(), []);
@@ -110,6 +126,10 @@ export function TokenListPage() {
     } finally {
       setRevoking(false);
     }
+  };
+
+  const toggleSortOrder = () => {
+    navigate({ sortOrder: q.sortOrder === 'ASC' ? 'DESC' : 'ASC', page: 1 });
   };
 
   const columns: Column<TokenRecord>[] = useMemo(() => [
@@ -175,42 +195,60 @@ export function TokenListPage() {
       <h2 class={styles.title}>Tokens</h2>
 
       <div class={styles.toolbar}>
-        <SearchInput
-          value={userIdInput}
-          onInput={setUserIdInput}
-          placeholder="Search by User ID..."
-        />
-        <SearchInput
-          value={prefixInput}
-          onInput={setPrefixInput}
-          placeholder="Search by Token Prefix..."
-        />
+        <div class={styles.toolbarSearch}>
+          <SearchInput
+            value={userIdInput}
+            onInput={setUserIdInput}
+            placeholder="Search User ID..."
+          />
+          <SearchInput
+            value={prefixInput}
+            onInput={setPrefixInput}
+            placeholder="Search Token Prefix..."
+          />
+        </div>
 
-        <select
-          class={styles.select}
-          value={q.appName}
-          onChange={(e) => navigate({ appName: (e.target as HTMLSelectElement).value })}
-        >
-          <option value="">All Apps</option>
-          {(apps || []).map((a) => (
-            <option key={a.id} value={a.name}>{a.name}</option>
-          ))}
-        </select>
+        <div class={styles.toolbarControls}>
+          <CustomSelect
+            value={q.appName}
+            options={[
+              { value: '', label: 'All Apps' },
+              ...(apps || []).map((a) => ({ value: a.name, label: a.name })),
+            ]}
+            onChange={(v) => navigate({ appName: v })}
+          />
 
-        <select
-          class={styles.select}
-          value={q.status}
-          onChange={(e) => navigate({ status: (e.target as HTMLSelectElement).value as StatusFilter })}
-        >
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="expired">Expired</option>
-          <option value="revoked">Revoked</option>
-        </select>
+          <CustomSelect
+            value={q.status}
+            options={[
+              { value: 'all', label: 'All Status' },
+              { value: 'active', label: 'Active' },
+              { value: 'expired', label: 'Expired' },
+              { value: 'revoked', label: 'Revoked' },
+            ]}
+            onChange={(v) => navigate({ status: v as StatusFilter })}
+          />
 
-        <button class={styles.refreshBtn} onClick={refetch} title="Refresh">
-          ↻
-        </button>
+          <div class={styles.sortGroup}>
+            <CustomSelect
+              value={q.sortBy}
+              triggerClass={styles.sortSelect}
+              options={SORT_OPTIONS.map((o) => ({ value: o.value, label: `Sort: ${o.label}` }))}
+              onChange={(v) => navigate({ sortBy: v as SortableField, page: 1 })}
+            />
+            <button
+              class={`${styles.dirBtn} ${q.sortOrder === 'ASC' ? styles.dirBtnAsc : styles.dirBtnDesc}`}
+              onClick={toggleSortOrder}
+              title={q.sortOrder === 'ASC' ? 'Ascending — click for descending' : 'Descending — click for ascending'}
+            >
+              <IconSortAsc size={15} />
+            </button>
+          </div>
+
+          <button class={styles.refreshBtn} onClick={refetch} title="Refresh">
+            <IconRefresh size={16} />
+          </button>
+        </div>
       </div>
 
       <DataTable

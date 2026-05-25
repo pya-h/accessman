@@ -239,8 +239,8 @@ describe('TokensService', () => {
 
       await service.findAll({ userId: 'user1' });
 
-      expect(qb.andWhere).toHaveBeenCalledWith('token.userId = :userId', {
-        userId: 'user1',
+      expect(qb.andWhere).toHaveBeenCalledWith('token.userId ILIKE :userId', {
+        userId: '%user1%',
       });
     });
 
@@ -267,7 +267,7 @@ describe('TokensService', () => {
 
       expect(qb.andWhere).toHaveBeenCalledWith(
         'token.tokenPrefix ILIKE :tokenPrefix',
-        { tokenPrefix: 'myapp_abc%' },
+        { tokenPrefix: '%myapp_abc%' },
       );
     });
 
@@ -278,6 +278,38 @@ describe('TokensService', () => {
 
       expect(qb.skip).toHaveBeenCalledWith(40);
       expect(qb.take).toHaveBeenCalledWith(20);
+    });
+
+    it('defaults to createdAt DESC sort', async () => {
+      qb.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAll({});
+
+      expect(qb.orderBy).toHaveBeenCalledWith('token.createdAt', 'DESC');
+    });
+
+    it('applies sortBy userId ASC', async () => {
+      qb.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAll({ sortBy: 'userId', sortOrder: 'ASC' });
+
+      expect(qb.orderBy).toHaveBeenCalledWith('token.userId', 'ASC');
+    });
+
+    it('applies sortBy appName DESC', async () => {
+      qb.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAll({ sortBy: 'appName', sortOrder: 'DESC' });
+
+      expect(qb.orderBy).toHaveBeenCalledWith('app.name', 'DESC');
+    });
+
+    it('applies sortBy expiresAt ASC', async () => {
+      qb.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAll({ sortBy: 'expiresAt', sortOrder: 'ASC' });
+
+      expect(qb.orderBy).toHaveBeenCalledWith('token.expiresAt', 'ASC');
     });
   });
 

@@ -135,6 +135,44 @@ describe('ImportResultsPage', () => {
     );
   });
 
+  it('downloads JSON with correct content', () => {
+    mockLastResult = {
+      imported: [
+        { userId: 'u1', appName: 'myapp', token: 'myapp_ABC123', expiresAt: '2026-01-01' },
+      ],
+      errors: [],
+    };
+
+    // Mock URL.createObjectURL and revokeObjectURL
+    const mockUrl = 'blob:test';
+    const origCreate = URL.createObjectURL;
+    const origRevoke = URL.revokeObjectURL;
+    URL.createObjectURL = vi.fn(() => mockUrl);
+    URL.revokeObjectURL = vi.fn();
+
+    const clickSpy = vi.fn();
+    const origCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const el = origCreateElement(tag);
+      if (tag === 'a') {
+        Object.defineProperty(el, 'click', { value: clickSpy });
+      }
+      return el;
+    });
+
+    render(<ImportResultsPage />);
+
+    fireEvent.click(screen.getByText('Download JSON'));
+
+    expect(URL.createObjectURL).toHaveBeenCalled();
+    const blob = (URL.createObjectURL as ReturnType<typeof vi.fn>).mock.calls[0][0] as Blob;
+    expect(blob.type).toBe('application/json');
+    expect(clickSpy).toHaveBeenCalled();
+
+    URL.createObjectURL = origCreate;
+    URL.revokeObjectURL = origRevoke;
+  });
+
   it('navigates to /import on "New Import" click', () => {
     mockLastResult = { imported: [], errors: [{ userId: 'u1', appName: 'a', reason: 'fail' }] };
 

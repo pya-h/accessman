@@ -7,6 +7,7 @@ import { DataTable } from '@/components/table/data-table';
 import type { Column } from '@/components/table/data-table';
 import { StatusBadge } from '@/components/status-badge';
 import { showToast } from '@/components/toast';
+import { IconPlus } from '@/components/icons';
 import styles from './app-list.module.css';
 
 export function AppListPage() {
@@ -56,7 +57,7 @@ export function AppListPage() {
       <div class={styles.header}>
         <h2 class={styles.title}>Apps</h2>
         <button class={styles.registerBtn} onClick={() => setShowForm(!showForm)}>
-          {showForm ? 'Cancel' : '+ Register App'}
+          {showForm ? 'Cancel' : <><IconPlus size={14} /> Register App</>}
         </button>
       </div>
 

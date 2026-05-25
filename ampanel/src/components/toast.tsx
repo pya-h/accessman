@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'preact/hooks';
+import { IconCheck, IconX, IconAlert } from '@/components/icons';
 import styles from './toast.module.css';
 
 type ToastType = 'success' | 'error' | 'warning';
@@ -59,7 +60,7 @@ export function ToastContainer() {
           onClick={() => dismissToast(toast.id)}
         >
           <span class={styles.icon}>
-            {toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : '⚠'}
+            {toast.type === 'success' ? <IconCheck size={14} /> : toast.type === 'error' ? <IconX size={14} /> : <IconAlert size={14} />}
           </span>
           <span class={styles.message}>{toast.message}</span>
           <button
@@ -67,7 +68,7 @@ export function ToastContainer() {
             onClick={(e) => { e.stopPropagation(); dismissToast(toast.id); }}
             aria-label="Dismiss"
           >
-            ✕
+            <IconX size={12} />
           </button>
         </div>
       ))}

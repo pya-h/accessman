@@ -69,12 +69,11 @@ describe('ImportPage', () => {
   it('validates CSV must have header + data', async () => {
     render(<ImportPage />);
 
-    const textarea = screen.getByPlaceholderText(/paste json/i);
-    fireEvent.input(textarea, { target: { value: 'userId,appName' } });
+    // Switch format to CSV via toggle button
+    fireEvent.click(screen.getByRole('button', { name: 'CSV' }));
 
-    // Switch format to CSV
-    const formatSelect = screen.getAllByRole('combobox')[0];
-    fireEvent.change(formatSelect, { target: { value: 'csv' } });
+    const textarea = screen.getByPlaceholderText(/paste csv/i);
+    fireEvent.input(textarea, { target: { value: 'userId,appName' } });
 
     fireEvent.click(screen.getByRole('button', { name: /import tokens/i }));
 
@@ -121,17 +120,17 @@ describe('ImportPage', () => {
     const textarea = screen.getByPlaceholderText(/paste json/i);
     fireEvent.input(textarea, { target: { value: '[{"userId":"u1"}]' } });
 
-    // Switch scope to single app
-    const scopeSelect = screen.getAllByRole('combobox')[2];
-    fireEvent.change(scopeSelect, { target: { value: 'single' } });
+    // Switch scope to single app — click trigger, then option
+    fireEvent.click(screen.getByRole('button', { name: 'All apps (per-row)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Single app' }));
 
     await waitFor(() => {
-      expect(screen.getByText('myapp')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /select app/i })).toBeInTheDocument();
     });
 
     // Select app
-    const appSelect = screen.getAllByRole('combobox')[3];
-    fireEvent.change(appSelect, { target: { value: 'myapp' } });
+    fireEvent.click(screen.getByRole('button', { name: /select app/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'myapp' }));
 
     fireEvent.click(screen.getByRole('button', { name: /import tokens/i }));
 
@@ -153,9 +152,9 @@ describe('ImportPage', () => {
     const textarea = screen.getByPlaceholderText(/paste json/i);
     fireEvent.input(textarea, { target: { value: '[{"userId":"u1","appName":"myapp"}]' } });
 
-    // Switch to reissue mode
-    const modeSelect = screen.getAllByRole('combobox')[1];
-    fireEvent.change(modeSelect, { target: { value: 'reissue' } });
+    // Switch to reissue mode — click trigger, then option
+    fireEvent.click(screen.getByRole('button', { name: 'Import (new tokens)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reissue (revoke + new)' }));
 
     fireEvent.click(screen.getByRole('button', { name: /reissue tokens/i }));
 
@@ -169,17 +168,16 @@ describe('ImportPage', () => {
     });
   });
 
-  it('auto-detects CSV format from pasted content', async () => {
+  it('switches format to CSV and imports CSV content', async () => {
     mockImportTokens.mockResolvedValue({ imported: [], errors: [] });
 
     render(<ImportPage />);
 
-    const textarea = screen.getByPlaceholderText(/paste json/i);
-    fireEvent.input(textarea, { target: { value: 'userId,appName\nu1,myapp' } });
+    // Switch to CSV format
+    fireEvent.click(screen.getByRole('button', { name: 'CSV' }));
 
-    // Format should auto-detect to CSV
-    const formatSelect = screen.getAllByRole('combobox')[0] as HTMLSelectElement;
-    expect(formatSelect.value).toBe('csv');
+    const textarea = screen.getByPlaceholderText(/paste csv/i);
+    fireEvent.input(textarea, { target: { value: 'userId,appName\nu1,myapp' } });
 
     fireEvent.click(screen.getByRole('button', { name: /import tokens/i }));
 
@@ -216,5 +214,19 @@ describe('ImportPage', () => {
 
     expect(screen.getByText(/drop a .json or .csv file here/i)).toBeInTheDocument();
     expect(screen.getByText(/or click to browse/i)).toBeInTheDocument();
+  });
+
+  it('converts JSON to CSV when switching format', async () => {
+    render(<ImportPage />);
+
+    const textarea = screen.getByPlaceholderText(/paste json/i);
+    fireEvent.input(textarea, { target: { value: '[{"userId":"u1","appName":"myapp"}]' } });
+
+    // Switch to CSV — should auto-convert
+    fireEvent.click(screen.getByRole('button', { name: 'CSV' }));
+
+    await waitFor(() => {
+      expect(mockShowToast).toHaveBeenCalledWith('success', 'Converted to CSV');
+    });
   });
 });
