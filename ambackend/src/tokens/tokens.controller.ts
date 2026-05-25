@@ -53,6 +53,7 @@ export class TokensController {
 
   @UseGuards(AppSecurityGuard, OperatorGuard)
   @Post(':id/revoke')
+  @HttpCode(200)
   async revoke(@Param('id', ParseIntPipe) id: number) {
     return this.tokensService.revoke(id);
   }
