@@ -8,7 +8,7 @@
  *
  * Run: npm run test:e2e
  */
-import { createHash } from 'crypto';
+import { createHash, randomBytes, randomUUID } from 'crypto';
 import { Test } from '@nestjs/testing';
 import {
   FastifyAdapter,
@@ -984,6 +984,289 @@ describe('AccessMan E2E', () => {
       });
 
       expect(res.statusCode).toBe(403);
+    });
+  });
+
+  // ─── Custom Token Import ────────────────────────────────────────────
+
+  describe('Custom Token Import', () => {
+    beforeEach(async () => {
+      await cleanDb();
+      await seedAdminApp();
+    });
+
+    it('import with custom token via JSON → token is returned and verifiable', async () => {
+      const customToken = 'mtapp_CustomToken12345678';
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/import',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [{ userId: 'user1', appName: 'mtapp', token: customToken }],
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = JSON.parse(res.payload);
+      expect(body.imported).toHaveLength(1);
+      expect(body.imported[0].token).toBe(customToken);
+
+      // Verify it works
+      const verifyRes = await app.inject({
+        method: 'POST',
+        url: '/api/tokens/verify',
+        headers: tier1Headers('mtapp'),
+        payload: { token: customToken, userId: 'user1' },
+      });
+      const verifyBody = JSON.parse(verifyRes.payload);
+      expect(verifyBody.valid).toBe(true);
+      expect(verifyBody.userId).toBe('user1');
+    });
+
+    it('import with custom token via CSV → token works', async () => {
+      const customToken = 'csvmt_CustomCSVToken1234';
+      const csv = `userId,appName,token\nuser1,csvmt,${customToken}`;
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/import',
+        headers: { ...operatorHeaders, 'content-type': 'text/csv' },
+        payload: csv,
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = JSON.parse(res.payload);
+      expect(body.imported).toHaveLength(1);
+      expect(body.imported[0].token).toBe(customToken);
+
+      // Verify
+      const verifyRes = await app.inject({
+        method: 'POST',
+        url: '/api/tokens/verify',
+        headers: tier1Headers('csvmt'),
+        payload: { token: customToken, userId: 'user1' },
+      });
+      expect(JSON.parse(verifyRes.payload).valid).toBe(true);
+    });
+
+    it('per-app import with custom token → prefix must match URL appName', async () => {
+      const customToken = 'permt_ValidPerAppToken1';
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/import/permt',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [{ userId: 'user1', token: customToken }],
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = JSON.parse(res.payload);
+      expect(body.imported).toHaveLength(1);
+      expect(body.imported[0].token).toBe(customToken);
+
+      // Mismatched prefix
+      const badRes = await app.inject({
+        method: 'POST',
+        url: '/api/import/permt',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [{ userId: 'user2', token: 'wrongapp_SomeToken123' }],
+      });
+      const badBody = JSON.parse(badRes.payload);
+      expect(badBody.errors).toHaveLength(1);
+      expect(badBody.errors[0].reason).toContain('does not match');
+    });
+
+    it('reissue with custom token → old revoked, new custom token verifiable', async () => {
+      const oldToken = await importToken('user1', 'reimt');
+
+      const customToken = 'reimt_ReissueCustomTok1';
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/import/reissue',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [
+          { userId: 'user1', appName: 'reimt', token: customToken },
+        ],
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = JSON.parse(res.payload);
+      expect(body.imported).toHaveLength(1);
+      expect(body.imported[0].token).toBe(customToken);
+
+      // Old token is revoked
+      const oldRes = await app.inject({
+        method: 'POST',
+        url: '/api/tokens/verify',
+        headers: tier1Headers('reimt'),
+        payload: { token: oldToken, userId: 'user1' },
+      });
+      expect(JSON.parse(oldRes.payload).valid).toBe(false);
+
+      // New custom token works
+      const newRes = await app.inject({
+        method: 'POST',
+        url: '/api/tokens/verify',
+        headers: tier1Headers('reimt'),
+        payload: { token: customToken, userId: 'user1' },
+      });
+      expect(JSON.parse(newRes.payload).valid).toBe(true);
+    });
+
+    it('invalid custom token format → proper error response', async () => {
+      // Too short code
+      const res1 = await app.inject({
+        method: 'POST',
+        url: '/api/import',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [{ userId: 'user1', appName: 'fmtapp', token: 'fmtapp_short' }],
+      });
+      const body1 = JSON.parse(res1.payload);
+      expect(body1.errors).toHaveLength(1);
+      expect(body1.errors[0].reason).toContain('8-64 characters');
+
+      // Wrong prefix
+      const res2 = await app.inject({
+        method: 'POST',
+        url: '/api/import',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [{ userId: 'user2', appName: 'fmtapp', token: 'wrong_ValidCode1234' }],
+      });
+      const body2 = JSON.parse(res2.payload);
+      expect(body2.errors).toHaveLength(1);
+      expect(body2.errors[0].reason).toContain('does not match');
+    });
+
+    it('duplicate custom token → proper error response', async () => {
+      const customToken = 'dupmt_DuplicateCustomTok';
+
+      // First import succeeds
+      const res1 = await app.inject({
+        method: 'POST',
+        url: '/api/import',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [{ userId: 'user1', appName: 'dupmt', token: customToken }],
+      });
+      expect(JSON.parse(res1.payload).imported).toHaveLength(1);
+
+      // Same token for different user → hash collision
+      const res2 = await app.inject({
+        method: 'POST',
+        url: '/api/import',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [{ userId: 'user2', appName: 'dupmt', token: customToken }],
+      });
+      const body2 = JSON.parse(res2.payload);
+      expect(body2.errors).toHaveLength(1);
+      expect(body2.errors[0].reason).toContain('duplicate token');
+    });
+
+    it('custom token visible in operator listing', async () => {
+      const customToken = 'listmt_OperatorListToken';
+      await app.inject({
+        method: 'POST',
+        url: '/api/import',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [{ userId: 'user1', appName: 'listmt', token: customToken }],
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/tokens?appName=listmt',
+        headers: operatorHeaders,
+      });
+
+      const body = JSON.parse(res.payload);
+      expect(body.data).toHaveLength(1);
+      expect(body.data[0].tokenPrefix).toBe('listmt_Operator');
+      expect(body.data[0].userId).toBe('user1');
+    });
+  });
+
+  // ─── Dynamic Inputs ───────────────────────────────────────────────
+
+  describe('Dynamic Inputs', () => {
+    beforeEach(async () => {
+      await cleanDb();
+      await seedAdminApp();
+    });
+
+    it('full lifecycle with random userId, appName, expiresAt, and metadata', async () => {
+      const randApp = `dyn-${randomBytes(6).toString('hex')}`;
+      const randUser = randomUUID();
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + Math.floor(Math.random() * 365) + 30);
+      const expiresAt = futureDate.toISOString();
+      const randMeta = { tag: randomBytes(4).toString('hex'), score: Math.floor(Math.random() * 1000) };
+
+      // Import
+      const importRes = await app.inject({
+        method: 'POST',
+        url: '/api/import',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [{ userId: randUser, appName: randApp, expiresAt }],
+      });
+
+      expect(importRes.statusCode).toBe(201);
+      const importBody = JSON.parse(importRes.payload);
+      expect(importBody.imported).toHaveLength(1);
+      const rawToken = importBody.imported[0].token;
+      expect(rawToken).toMatch(new RegExp(`^${randApp}_[0-9a-f]{64}$`));
+
+      // Verify
+      const verifyRes = await app.inject({
+        method: 'POST',
+        url: '/api/tokens/verify',
+        headers: tier1Headers(randApp),
+        payload: { token: rawToken, userId: randUser },
+      });
+      const verifyBody = JSON.parse(verifyRes.payload);
+      expect(verifyBody.valid).toBe(true);
+      expect(verifyBody.userId).toBe(randUser);
+      expect(verifyBody.appName).toBe(randApp);
+
+      // Update metadata
+      const metaRes = await app.inject({
+        method: 'PATCH',
+        url: '/api/tokens/metadata',
+        headers: tier1Headers(randApp),
+        payload: { token: rawToken, metadata: randMeta },
+      });
+      expect(metaRes.statusCode).toBe(200);
+
+      // Verify metadata persisted
+      const verifyMeta = await app.inject({
+        method: 'POST',
+        url: '/api/tokens/verify',
+        headers: tier1Headers(randApp),
+        payload: { token: rawToken, userId: randUser },
+      });
+      expect(JSON.parse(verifyMeta.payload).metadata).toEqual(randMeta);
+
+      // Reissue
+      const reissueRes = await app.inject({
+        method: 'POST',
+        url: '/api/import/reissue',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [{ userId: randUser, appName: randApp }],
+      });
+      expect(reissueRes.statusCode).toBe(201);
+      const newToken = JSON.parse(reissueRes.payload).imported[0].token;
+      expect(newToken).not.toBe(rawToken);
+
+      // Old token revoked
+      const oldRes = await app.inject({
+        method: 'POST',
+        url: '/api/tokens/verify',
+        headers: tier1Headers(randApp),
+        payload: { token: rawToken, userId: randUser },
+      });
+      expect(JSON.parse(oldRes.payload).reason).toBe('revoked');
+
+      // New token valid
+      const newRes = await app.inject({
+        method: 'POST',
+        url: '/api/tokens/verify',
+        headers: tier1Headers(randApp),
+        payload: { token: newToken, userId: randUser },
+      });
+      expect(JSON.parse(newRes.payload).valid).toBe(true);
     });
   });
 

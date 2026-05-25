@@ -91,6 +91,111 @@ X-Operator-Key: {{$dotenv OPERATOR_KEY}}
 ]
 
 ### --------------------------------------------------------
+### Custom Token Import (Operator — Tier 2)
+### Operator provides their own token strings
+### Token format: {appName}_{CODE}, CODE must be 8–64 chars
+### --------------------------------------------------------
+
+### Import with custom token — JSON body
+POST {{$dotenv HOST}}/import
+Content-Type: application/json
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+[
+  {
+    "userId": "user-custom-001",
+    "appName": "myapp",
+    "token": "myapp_CustomSecretToken001"
+  }
+]
+
+### Import with custom token — CSV body
+POST {{$dotenv HOST}}/import
+Content-Type: text/csv
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+userId,appName,token
+user-custom-002,myapp,myapp_AnotherCustomTok02
+
+### Import with custom token — per-app (appName from URL)
+POST {{$dotenv HOST}}/import/myapp
+Content-Type: application/json
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+[
+  {
+    "userId": "user-custom-003",
+    "token": "myapp_PerAppCustomTok003"
+  }
+]
+
+### Import with custom token — invalid format (CODE too short, should be in errors[])
+POST {{$dotenv HOST}}/import
+Content-Type: application/json
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+[
+  {
+    "userId": "user-custom-bad",
+    "appName": "myapp",
+    "token": "myapp_short"
+  }
+]
+
+### Import with custom token — wrong prefix (should be in errors[])
+POST {{$dotenv HOST}}/import
+Content-Type: application/json
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+[
+  {
+    "userId": "user-custom-bad2",
+    "appName": "myapp",
+    "token": "wrongapp_ValidCodeHere123"
+  }
+]
+
+### Import with custom token — duplicate (run after first custom import; should be in errors[])
+POST {{$dotenv HOST}}/import
+Content-Type: application/json
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+[
+  {
+    "userId": "user-custom-dup",
+    "appName": "myapp",
+    "token": "myapp_CustomSecretToken001"
+  }
+]
+
+### Re-issue with custom token (replaces active token with operator-provided one)
+POST {{$dotenv HOST}}/import/reissue
+Content-Type: application/json
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+[
+  {
+    "userId": "user-custom-001",
+    "appName": "myapp",
+    "token": "myapp_ReissuedCustomTk01"
+  }
+]
+
+### --------------------------------------------------------
 ### Re-Issue Endpoint (Operator — Tier 2)
 ### Replaces existing tokens (active or revoked) with new ones
 ### --------------------------------------------------------

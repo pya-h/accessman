@@ -67,6 +67,7 @@ export class ImportController {
       userId: item.userId,
       appName,
       expiresAt: item.expiresAt,
+      token: item.token,
     }));
     return this.importService.importTokens(items, this.defaultExpiryDays);
   }

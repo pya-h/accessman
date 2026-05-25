@@ -1,3 +1,4 @@
+import { randomBytes, randomUUID } from 'crypto';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
@@ -331,6 +332,46 @@ describe('TokensService', () => {
 
       await expect(service.revoke(1)).rejects.toThrow(BadRequestException);
       expect(repo.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('dynamic inputs', () => {
+    it('verify and updateMetadata with random userId, appName, and metadata', async () => {
+      const randApp = `dynapp-${randomBytes(6).toString('hex')}`;
+      const randUser = randomUUID();
+      const randMeta = { role: randomBytes(4).toString('hex'), level: Math.floor(Math.random() * 100) };
+
+      const { raw, hash } = generateToken(randApp);
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + Math.floor(Math.random() * 365) + 1);
+
+      repo.findOne.mockResolvedValue(
+        mockToken({
+          tokenHash: hash,
+          userId: randUser,
+          metadata: {},
+          expiresAt: futureDate,
+          app: { id: 1, name: randApp, isActive: true, createdAt: new Date(), tokens: [] },
+        }),
+      );
+
+      const verifyResult = await service.verify(raw, randApp, randUser);
+      expect(verifyResult).toMatchObject({ valid: true, userId: randUser, appName: randApp });
+
+      repo.findOne.mockResolvedValue(
+        mockToken({
+          tokenHash: hash,
+          userId: randUser,
+          metadata: {},
+          expiresAt: futureDate,
+          app: { id: 1, name: randApp, isActive: true, createdAt: new Date(), tokens: [] },
+        }),
+      );
+
+      const metaResult = await service.updateMetadata(raw, randApp, randMeta);
+      expect(metaResult).toEqual({ success: true });
+      const saved = repo.save.mock.calls[repo.save.mock.calls.length - 1][0];
+      expect(saved.metadata).toEqual(randMeta);
     });
   });
 });

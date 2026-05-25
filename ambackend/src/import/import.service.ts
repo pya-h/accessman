@@ -5,14 +5,23 @@ import { validateSync } from 'class-validator';
 import { parse } from 'csv-parse/sync';
 import { AppEntity } from '../apps/app.entity';
 import { TokenEntity } from '../tokens/token.entity';
-import { generateToken } from '../tokens/token.utils';
+import {
+  generateToken,
+  validateCustomToken,
+  processCustomToken,
+} from '../tokens/token.utils';
 
 @Injectable()
 export class ImportService {
   constructor(private readonly dataSource: DataSource) {}
 
   async importTokens(
-    items: { userId: string; appName: string; expiresAt?: string }[],
+    items: {
+      userId: string;
+      appName: string;
+      expiresAt?: string;
+      token?: string;
+    }[],
     defaultExpiryDays: number,
   ): Promise<{
     imported: {
@@ -66,7 +75,42 @@ export class ImportService {
           continue;
         }
 
-        const { raw, hash, prefix } = generateToken(item.appName);
+        let raw: string, hash: string, prefix: string;
+
+        if (item.token) {
+          const validationError = validateCustomToken(
+            item.token,
+            item.appName,
+          );
+          if (validationError) {
+            errors.push({
+              userId: item.userId,
+              appName: item.appName,
+              reason: validationError,
+            });
+            continue;
+          }
+
+          const processed = processCustomToken(item.token, item.appName);
+          raw = processed.raw;
+          hash = processed.hash;
+          prefix = processed.prefix;
+
+          // Check for hash collision
+          const hashExists = await manager.findOne(TokenEntity, {
+            where: { tokenHash: hash },
+          });
+          if (hashExists) {
+            errors.push({
+              userId: item.userId,
+              appName: item.appName,
+              reason: 'Token already exists (duplicate token value)',
+            });
+            continue;
+          }
+        } else {
+          ({ raw, hash, prefix } = generateToken(item.appName));
+        }
 
         let expiresAt: Date;
         if (item.expiresAt) {
@@ -99,7 +143,12 @@ export class ImportService {
   }
 
   async reIssueTokens(
-    items: { userId: string; appName: string; expiresAt?: string }[],
+    items: {
+      userId: string;
+      appName: string;
+      expiresAt?: string;
+      token?: string;
+    }[],
     defaultExpiryDays: number,
   ): Promise<{
     imported: {
@@ -142,12 +191,47 @@ export class ImportService {
           where: { userId: item.userId, appId, revokedAt: IsNull() },
         });
 
+        let raw: string, hash: string, prefix: string;
+
+        if (item.token) {
+          const validationError = validateCustomToken(
+            item.token,
+            item.appName,
+          );
+          if (validationError) {
+            errors.push({
+              userId: item.userId,
+              appName: item.appName,
+              reason: validationError,
+            });
+            continue;
+          }
+
+          const processed = processCustomToken(item.token, item.appName);
+          raw = processed.raw;
+          hash = processed.hash;
+          prefix = processed.prefix;
+
+          // Check for hash collision
+          const hashExists = await manager.findOne(TokenEntity, {
+            where: { tokenHash: hash },
+          });
+          if (hashExists) {
+            errors.push({
+              userId: item.userId,
+              appName: item.appName,
+              reason: 'Token already exists (duplicate token value)',
+            });
+            continue;
+          }
+        } else {
+          ({ raw, hash, prefix } = generateToken(item.appName));
+        }
+
         if (existing) {
           existing.revokedAt = new Date();
           await manager.save(existing);
         }
-
-        const { raw, hash, prefix } = generateToken(item.appName);
 
         let expiresAt: Date;
         if (item.expiresAt) {

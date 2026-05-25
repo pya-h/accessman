@@ -13,4 +13,8 @@ export class ImportItemPerAppDto {
   @IsOptional()
   @IsDateString()
   expiresAt?: string;
+
+  @IsOptional()
+  @IsString()
+  token?: string;
 }

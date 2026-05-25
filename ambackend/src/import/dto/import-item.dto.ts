@@ -17,4 +17,8 @@ export class ImportItemDto {
   @IsOptional()
   @IsDateString()
   expiresAt?: string;
+
+  @IsOptional()
+  @IsString()
+  token?: string;
 }

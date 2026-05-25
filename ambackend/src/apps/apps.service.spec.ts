@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ConflictException } from '@nestjs/common';
@@ -160,6 +161,23 @@ describe('AppsService', () => {
       repo.save.mockRejectedValue(error);
 
       await expect(service.findOrCreate('new-app')).rejects.toThrow(error);
+    });
+  });
+
+  describe('dynamic inputs', () => {
+    it('create and findOrCreate with random app names', async () => {
+      const randName = `app-${randomBytes(8).toString('hex')}`;
+      repo.findOne.mockResolvedValue(null);
+
+      const created = await service.create(randName);
+      expect(created.name).toBe(randName);
+      expect(repo.create).toHaveBeenCalledWith({ name: randName });
+
+      repo.findOne.mockResolvedValue(mockApp({ name: randName, id: 42 }));
+
+      const found = await service.findOrCreate(randName);
+      expect(found.name).toBe(randName);
+      expect(found.id).toBe(42);
     });
   });
 });

@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { createHash, randomBytes, randomUUID } from 'crypto';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { DataSource, IsNull } from 'typeorm';
@@ -6,6 +7,7 @@ import { ImportService } from './import.service';
 import { AppEntity } from '../apps/app.entity';
 import { TokenEntity } from '../tokens/token.entity';
 import { ImportItemDto } from './dto/import-item.dto';
+import { hashToken } from '../tokens/token.utils';
 
 describe('ImportService', () => {
   let service: ImportService;
@@ -363,6 +365,175 @@ describe('ImportService', () => {
     });
   });
 
+  describe('importTokens — custom token import', () => {
+    it('imports with custom token — token is stored and returned as-is', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce({ id: 1, name: 'myapp' }) // App lookup
+        .mockResolvedValueOnce(null) // No existing active token
+        .mockResolvedValueOnce(null); // No hash collision
+
+      const customToken = 'myapp_ABCDEF12345678';
+      const result = await service.importTokens(
+        [{ userId: 'user1', appName: 'myapp', token: customToken }],
+        365,
+      );
+
+      expect(result.imported).toHaveLength(1);
+      expect(result.errors).toHaveLength(0);
+      expect(result.imported[0].token).toBe(customToken);
+
+      // Verify hash was computed correctly
+      const savedToken = mockManager.save.mock.calls[0][0];
+      expect(savedToken.tokenHash).toBe(hashToken(customToken));
+      expect(savedToken.tokenPrefix).toBe('myapp_ABCDEF12');
+    });
+
+    it('rejects custom token with wrong prefix', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce({ id: 1, name: 'myapp' }) // App lookup
+        .mockResolvedValueOnce(null); // No existing active token
+
+      const result = await service.importTokens(
+        [{ userId: 'user1', appName: 'myapp', token: 'otherapp_ABCDEF1234' }],
+        365,
+      );
+
+      expect(result.imported).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].reason).toContain('does not match');
+    });
+
+    it('rejects custom token with CODE too short', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce({ id: 1, name: 'myapp' })
+        .mockResolvedValueOnce(null);
+
+      const result = await service.importTokens(
+        [{ userId: 'user1', appName: 'myapp', token: 'myapp_short' }],
+        365,
+      );
+
+      expect(result.imported).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].reason).toContain('8-64 characters');
+    });
+
+    it('rejects custom token with CODE too long', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce({ id: 1, name: 'myapp' })
+        .mockResolvedValueOnce(null);
+
+      const longCode = 'a'.repeat(65);
+      const result = await service.importTokens(
+        [{ userId: 'user1', appName: 'myapp', token: `myapp_${longCode}` }],
+        365,
+      );
+
+      expect(result.imported).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].reason).toContain('8-64 characters');
+    });
+
+    it('rejects custom token with no underscore', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce({ id: 1, name: 'myapp' })
+        .mockResolvedValueOnce(null);
+
+      const result = await service.importTokens(
+        [{ userId: 'user1', appName: 'myapp', token: 'nounderscore' }],
+        365,
+      );
+
+      expect(result.imported).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].reason).toContain('underscore');
+    });
+
+    it('rejects duplicate custom token (hash collision)', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce({ id: 1, name: 'myapp' }) // App lookup
+        .mockResolvedValueOnce(null) // No existing active token
+        .mockResolvedValueOnce({ id: 99 }); // Hash already exists
+
+      const result = await service.importTokens(
+        [{ userId: 'user1', appName: 'myapp', token: 'myapp_DUPLICATE1234' }],
+        365,
+      );
+
+      expect(result.imported).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].reason).toContain('duplicate token');
+    });
+
+    it('mixed batch: some custom, some auto-generated', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce({ id: 1, name: 'myapp' }) // App lookup
+        .mockResolvedValueOnce(null) // No existing token for user1
+        .mockResolvedValueOnce(null) // No hash collision for custom token
+        .mockResolvedValueOnce(null); // No existing token for user2
+
+      const customToken = 'myapp_MANUAL12345678';
+      const result = await service.importTokens(
+        [
+          { userId: 'user1', appName: 'myapp', token: customToken },
+          { userId: 'user2', appName: 'myapp' },
+        ],
+        365,
+      );
+
+      expect(result.imported).toHaveLength(2);
+      expect(result.errors).toHaveLength(0);
+      expect(result.imported[0].token).toBe(customToken);
+      expect(result.imported[1].token).toMatch(/^myapp_[0-9a-f]{64}$/);
+    });
+  });
+
+  describe('reIssueTokens — custom token import', () => {
+    it('re-issues with custom token — old revoked, new custom token issued', async () => {
+      const existingToken = {
+        id: 99,
+        userId: 'user1',
+        appId: 1,
+        revokedAt: null,
+      };
+      mockManager.findOne
+        .mockResolvedValueOnce({ id: 1, name: 'myapp' }) // App
+        .mockResolvedValueOnce(existingToken) // Existing active token
+        .mockResolvedValueOnce(null); // No hash collision
+
+      const customToken = 'myapp_REISSUEMANUAL1';
+      const result = await service.reIssueTokens(
+        [{ userId: 'user1', appName: 'myapp', token: customToken }],
+        365,
+      );
+
+      expect(result.imported).toHaveLength(1);
+      expect(result.errors).toHaveLength(0);
+      expect(result.imported[0].token).toBe(customToken);
+      expect(existingToken.revokedAt).toBeInstanceOf(Date);
+    });
+
+    it('does not revoke existing token if custom token validation fails', async () => {
+      const existingToken = {
+        id: 99,
+        userId: 'user1',
+        appId: 1,
+        revokedAt: null,
+      };
+      mockManager.findOne
+        .mockResolvedValueOnce({ id: 1, name: 'myapp' })
+        .mockResolvedValueOnce(existingToken);
+
+      const result = await service.reIssueTokens(
+        [{ userId: 'user1', appName: 'myapp', token: 'myapp_short' }],
+        365,
+      );
+
+      expect(result.errors).toHaveLength(1);
+      expect(existingToken.revokedAt).toBeNull();
+    });
+  });
+
   describe('resolveItems', () => {
     it('parses valid JSON array', () => {
       const body = [{ userId: 'user1', appName: 'myapp' }];
@@ -419,6 +590,47 @@ describe('ImportService', () => {
       expect(() =>
         service.resolveItems('text/csv', malformed, ImportItemDto),
       ).toThrow(BadRequestException);
+    });
+  });
+
+  describe('dynamic inputs', () => {
+    it('import and reissue with random userId, appName, and expiresAt', async () => {
+      const randApp = `dyn-${randomBytes(6).toString('hex')}`;
+      const randUser = randomUUID();
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + Math.floor(Math.random() * 730) + 1);
+      const expiresAt = futureDate.toISOString();
+
+      mockManager.findOne
+        .mockResolvedValueOnce(null) // App not found → auto-create
+        .mockResolvedValueOnce(null); // No existing token
+
+      const importResult = await service.importTokens(
+        [{ userId: randUser, appName: randApp, expiresAt }],
+        365,
+      );
+
+      expect(importResult.imported).toHaveLength(1);
+      expect(importResult.errors).toHaveLength(0);
+      expect(importResult.imported[0].userId).toBe(randUser);
+      expect(importResult.imported[0].appName).toBe(randApp);
+      expect(importResult.imported[0].token).toMatch(new RegExp(`^${randApp}_[0-9a-f]{64}$`));
+      expect(importResult.imported[0].expiresAt).toEqual(new Date(expiresAt));
+
+      // Reissue for the same random user+app
+      const existingToken = { id: 50, userId: randUser, appId: 1, revokedAt: null };
+      mockManager.findOne
+        .mockResolvedValueOnce({ id: 1, name: randApp }) // App found
+        .mockResolvedValueOnce(existingToken); // Existing active token
+
+      const reissueResult = await service.reIssueTokens(
+        [{ userId: randUser, appName: randApp }],
+        365,
+      );
+
+      expect(reissueResult.imported).toHaveLength(1);
+      expect(reissueResult.imported[0].userId).toBe(randUser);
+      expect(existingToken.revokedAt).toBeInstanceOf(Date);
     });
   });
 });
