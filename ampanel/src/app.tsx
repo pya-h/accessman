@@ -5,6 +5,8 @@ import { AuthGuard } from '@/auth/auth-guard';
 import { Shell } from '@/components/layout/shell';
 import { ToastContainer } from '@/components/toast';
 import { LoginPage } from '@/pages/login/login';
+import { TokenListPage } from '@/pages/tokens/token-list';
+import { TokenDetailPage } from '@/pages/tokens/token-detail';
 
 applySettings(getSettings());
 
@@ -12,8 +14,6 @@ function PlaceholderPage({ name }: { name: string }) {
   return <div><h2>{name}</h2></div>;
 }
 
-function TokenListPage() { return <PlaceholderPage name="Tokens" />; }
-function TokenDetailPage() { return <PlaceholderPage name="Token Detail" />; }
 function AppListPage() { return <PlaceholderPage name="Apps" />; }
 function ImportPage() { return <PlaceholderPage name="Import" />; }
 function ImportResultsPage() { return <PlaceholderPage name="Import Results" />; }
