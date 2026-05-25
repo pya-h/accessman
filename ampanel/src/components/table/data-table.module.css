@@ -53,10 +53,12 @@
 
 .rowClickable {
   cursor: pointer;
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .rowClickable:hover {
   background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+  box-shadow: inset 3px 0 0 var(--color-accent);
 }
 
 .stickyCol {
@@ -70,11 +72,17 @@
 .skeleton {
   height: 1em;
   border-radius: 4px;
-  background: color-mix(in srgb, var(--color-text-secondary) 15%, transparent);
-  animation: pulse 1.5s ease-in-out infinite;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-text-secondary) 10%, transparent) 25%,
+    color-mix(in srgb, var(--color-text-secondary) 20%, transparent) 50%,
+    color-mix(in srgb, var(--color-text-secondary) 10%, transparent) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }

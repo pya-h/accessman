@@ -260,6 +260,17 @@ describe('TokensService', () => {
       expect(qb.andWhere).toHaveBeenCalledWith('token.revokedAt IS NOT NULL');
     });
 
+    it('applies tokenPrefix filter with ILIKE', async () => {
+      qb.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAll({ tokenPrefix: 'myapp_abc' });
+
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'token.tokenPrefix ILIKE :tokenPrefix',
+        { tokenPrefix: 'myapp_abc%' },
+      );
+    });
+
     it('applies pagination correctly', async () => {
       qb.getManyAndCount.mockResolvedValue([[], 0]);
 

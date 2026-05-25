@@ -1,0 +1,170 @@
+.container {
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-page);
+}
+
+.tab {
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.tab:hover {
+  color: var(--color-text-primary);
+}
+
+.tabActive {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+
+/* Raw tab */
+.rawHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-page);
+}
+
+.toggleCompact {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.toggleCompact:hover {
+  background: var(--color-bg-card);
+}
+
+.copyBtn {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.copyBtn:hover {
+  background: var(--color-bg-card);
+}
+
+.rawContent {
+  padding: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-x: auto;
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+}
+
+/* Table tab */
+.kvTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.kvRow {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.kvRow:last-child {
+  border-bottom: none;
+}
+
+.kvKey {
+  padding: var(--space-2) var(--space-3);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  vertical-align: top;
+  width: 140px;
+  background: var(--color-bg-page);
+}
+
+.kvValue {
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text-primary);
+  word-break: break-all;
+  background: var(--color-bg-card);
+}
+
+.kvValueMono {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.nestedPreview {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.previewText {
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  font-family: var(--font-mono);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewBtn {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: none;
+  color: var(--color-accent);
+  font-size: 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--transition-fast);
+}
+
+.viewBtn:hover {
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+
+.empty {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+  .kvKey {
+    width: auto;
+  }
+}

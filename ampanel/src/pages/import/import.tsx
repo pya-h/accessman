@@ -5,6 +5,7 @@ import type { ImportFormat, ImportMode, ImportResponse } from '@/api/import';
 import { listApps } from '@/api/apps';
 import { useQuery } from '@/lib/use-query';
 import { showToast } from '@/components/toast';
+import { FormatTemplate } from '@/components/format-template';
 import styles from './import.module.css';
 
 // In-memory state for passing import results to results page
@@ -220,6 +221,8 @@ export function ImportPage() {
           </div>
         )}
       </div>
+
+      <FormatTemplate format={format} mode={mode} scope={scope} />
 
       <button
         class={styles.submitBtn}

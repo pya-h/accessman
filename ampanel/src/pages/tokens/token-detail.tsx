@@ -4,7 +4,7 @@ import { getToken, revokeToken } from '@/api/tokens';
 import { useQuery } from '@/lib/use-query';
 import { relativeTime } from '@/lib/relative-time';
 import { StatusBadge } from '@/components/status-badge';
-import { JsonViewer } from '@/components/json-viewer';
+import { MetadataViewer } from '@/components/metadata-viewer';
 import { Modal } from '@/components/modal';
 import { showToast } from '@/components/toast';
 import styles from './token-detail.module.css';
@@ -78,7 +78,6 @@ export function TokenDetailPage() {
   }
 
   const status = getTokenStatus(token);
-  const hasMetadata = token.metadata && Object.keys(token.metadata).length > 0;
 
   return (
     <div class={styles.page}>
@@ -108,12 +107,10 @@ export function TokenDetailPage() {
           <Field label="Updated At" value={formatTimestamp(token.updatedAt)} />
         </dl>
 
-        {hasMetadata && (
-          <div class={styles.metadataSection}>
-            <h3 class={styles.sectionTitle}>Metadata</h3>
-            <JsonViewer data={token.metadata} />
-          </div>
-        )}
+        <div class={styles.metadataSection}>
+          <h3 class={styles.sectionTitle}>Metadata</h3>
+          <MetadataViewer data={token.metadata} />
+        </div>
       </div>
 
       <Modal

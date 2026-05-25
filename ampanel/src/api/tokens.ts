@@ -3,6 +3,7 @@ import { request } from './client';
 export interface TokenListParams {
   appName?: string;
   userId?: string;
+  tokenPrefix?: string;
   status?: 'active' | 'expired' | 'revoked' | 'all';
   page?: number;
   limit?: number;

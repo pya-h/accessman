@@ -119,6 +119,12 @@ export class TokensService {
       qb.andWhere('token.userId = :userId', { userId: query.userId });
     }
 
+    if (query.tokenPrefix) {
+      qb.andWhere('token.tokenPrefix ILIKE :tokenPrefix', {
+        tokenPrefix: `${query.tokenPrefix}%`,
+      });
+    }
+
     const now = new Date();
     switch (query.status) {
       case TokenStatus.ACTIVE:

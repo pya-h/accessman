@@ -4,6 +4,12 @@
   justify-content: center;
   min-height: 100vh;
   padding: var(--space-4);
+  animation: fadeIn var(--transition-slow) ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .card {
@@ -58,6 +64,7 @@
 
 .input:focus {
   border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 15%, transparent);
 }
 
 .button {

@@ -1,0 +1,75 @@
+.card {
+  background: var(--color-bg-page);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-card);
+}
+
+.headerTitle {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.reissueBadge {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-status-expired) 15%, transparent);
+  color: var(--color-status-expired);
+}
+
+.body {
+  padding: var(--space-3);
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.key {
+  color: var(--color-accent);
+}
+
+.str {
+  color: #16a34a;
+}
+
+.comment {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.required {
+  color: var(--color-status-revoked);
+  font-weight: 700;
+  font-style: normal;
+}
+
+.optional {
+  opacity: 0.6;
+}
+
+[data-theme="dark"] .str {
+  color: #4ade80;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .str {
+    color: #4ade80;
+  }
+}

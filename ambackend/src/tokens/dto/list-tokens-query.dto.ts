@@ -18,6 +18,10 @@ export class ListTokensQueryDto {
   userId?: string;
 
   @IsOptional()
+  @IsString()
+  tokenPrefix?: string;
+
+  @IsOptional()
   @IsEnum(TokenStatus)
   status?: TokenStatus;
 

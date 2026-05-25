@@ -27,15 +27,17 @@ function parseQuery(search: string) {
   const p = new URLSearchParams(search);
   return {
     userId: p.get('userId') || '',
+    tokenPrefix: p.get('tokenPrefix') || '',
     appName: p.get('appName') || '',
     status: (p.get('status') || 'all') as StatusFilter,
     page: Math.max(1, parseInt(p.get('page') || '1', 10) || 1),
   };
 }
 
-function buildSearch(filters: { userId: string; appName: string; status: StatusFilter; page: number }) {
+function buildSearch(filters: { userId: string; tokenPrefix: string; appName: string; status: StatusFilter; page: number }) {
   const p = new URLSearchParams();
   if (filters.userId) p.set('userId', filters.userId);
+  if (filters.tokenPrefix) p.set('tokenPrefix', filters.tokenPrefix);
   if (filters.appName) p.set('appName', filters.appName);
   if (filters.status !== 'all') p.set('status', filters.status);
   if (filters.page > 1) p.set('page', String(filters.page));
@@ -53,11 +55,15 @@ export function TokenListPage() {
   const [userIdInput, setUserIdInput] = useState(q.userId);
   const debouncedUserId = useDebounce(userIdInput, 300);
 
+  const [prefixInput, setPrefixInput] = useState(q.tokenPrefix);
+  const debouncedPrefix = useDebounce(prefixInput, 300);
+
   const [revokeTarget, setRevokeTarget] = useState<TokenRecord | null>(null);
   const [revoking, setRevoking] = useState(false);
 
   const params: TokenListParams = {
     userId: debouncedUserId || undefined,
+    tokenPrefix: debouncedPrefix || undefined,
     appName: q.appName || undefined,
     status: q.status === 'all' ? undefined : q.status,
     page: q.page,
@@ -66,17 +72,17 @@ export function TokenListPage() {
 
   const { data: tokenData, loading, refetch } = useQuery(
     () => listTokens(params),
-    [debouncedUserId, q.appName, q.status, q.page],
+    [debouncedUserId, debouncedPrefix, q.appName, q.status, q.page],
   );
 
   const { data: apps } = useQuery(() => listApps(), []);
 
-  // Sync debounced userId to URL (replaceState to avoid history pollution)
+  // Sync debounced inputs to URL (replaceState to avoid history pollution)
   useEffect(() => {
-    if (debouncedUserId !== q.userId) {
-      route(`/tokens${buildSearch({ ...q, userId: debouncedUserId, page: 1 })}`, true);
+    if (debouncedUserId !== q.userId || debouncedPrefix !== q.tokenPrefix) {
+      route(`/tokens${buildSearch({ ...q, userId: debouncedUserId, tokenPrefix: debouncedPrefix, page: 1 })}`, true);
     }
-  }, [debouncedUserId]);
+  }, [debouncedUserId, debouncedPrefix]);
 
   const navigate = (overrides: Partial<typeof q>) => {
     const next = { ...q, ...overrides };
@@ -173,6 +179,11 @@ export function TokenListPage() {
           value={userIdInput}
           onInput={setUserIdInput}
           placeholder="Search by User ID..."
+        />
+        <SearchInput
+          value={prefixInput}
+          onInput={setPrefixInput}
+          placeholder="Search by Token Prefix..."
         />
 
         <select
