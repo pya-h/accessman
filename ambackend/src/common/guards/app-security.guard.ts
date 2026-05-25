@@ -20,6 +20,9 @@ export class AppSecurityGuard implements CanActivate {
     private readonly security: ConfigType<typeof securityConfig>,
     private readonly appsService: AppsService,
   ) {
+    if (!this.security.securityKey) {
+      throw new Error('SECURITY_KEY environment variable is required');
+    }
     this.securityKey = this.security.securityKey;
   }
 

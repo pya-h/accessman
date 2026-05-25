@@ -24,6 +24,12 @@ export function clearCredentials(): void {
   sessionStorage.removeItem('am_operator_key');
 }
 
+let onAuthError: (() => void) | null = null;
+
+export function setAuthErrorHandler(handler: (() => void) | null): void {
+  onAuthError = handler;
+}
+
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const creds = getCredentials();
   if (!creds) throw { status: 401, message: 'Not authenticated' } as ApiError;
@@ -66,7 +72,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
 
   if (response.status === 401 || response.status === 403) {
-    clearCredentials();
+    onAuthError?.();
     throw { status: response.status, message: 'Session expired' } as ApiError;
   }
 

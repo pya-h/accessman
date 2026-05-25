@@ -68,6 +68,9 @@ export function ImportPage() {
       // Re-detect from content if extension didn't give a clear answer
       setFormat(detectFormat(text, file.name));
     };
+    reader.onerror = () => {
+      showToast('error', 'Failed to read file');
+    };
     reader.readAsText(file);
   };
 

@@ -18,6 +18,9 @@ export class OperatorGuard implements CanActivate {
     @Inject(securityConfig.KEY)
     private readonly security: ConfigType<typeof securityConfig>,
   ) {
+    if (!this.security.operatorKey) {
+      throw new Error('OPERATOR_KEY environment variable is required');
+    }
     this.operatorKey = this.security.operatorKey;
     this.adminAppName = this.security.adminAppName;
   }

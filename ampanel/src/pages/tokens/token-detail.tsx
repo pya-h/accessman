@@ -59,7 +59,7 @@ export function TokenDetailPage() {
     return (
       <div class={styles.page}>
         <div class={styles.backRow}>
-          <button class={styles.backBtn} onClick={() => history.back()}>← Back</button>
+          <button class={styles.backBtn} onClick={() => route('/tokens')}>← Back</button>
         </div>
         <p class={styles.loading}>Loading token...</p>
       </div>
@@ -70,7 +70,7 @@ export function TokenDetailPage() {
     return (
       <div class={styles.page}>
         <div class={styles.backRow}>
-          <button class={styles.backBtn} onClick={() => history.back()}>← Back</button>
+          <button class={styles.backBtn} onClick={() => route('/tokens')}>← Back</button>
         </div>
         <p class={styles.error}>{error || 'Token not found'}</p>
       </div>
@@ -83,7 +83,7 @@ export function TokenDetailPage() {
   return (
     <div class={styles.page}>
       <div class={styles.backRow}>
-        <button class={styles.backBtn} onClick={() => history.back()}>← Back</button>
+        <button class={styles.backBtn} onClick={() => route('/tokens')}>← Back</button>
         {status === 'active' && (
           <button class={styles.revokeBtn} onClick={() => setShowRevoke(true)}>Revoke</button>
         )}

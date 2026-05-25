@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'preact/hooks';
+import { useState, useMemo, useEffect } from 'preact/hooks';
 import { useLocation } from 'preact-iso';
 import type { ImportResponse } from '@/api/import';
 import { getLastImportResult } from './import';
@@ -25,10 +25,11 @@ export function ImportResultsPage() {
   const [tokensExpanded, setTokensExpanded] = useState(true);
   const [errorsExpanded, setErrorsExpanded] = useState(true);
 
-  if (!result) {
-    route('/import', true);
-    return null;
-  }
+  useEffect(() => {
+    if (!result) route('/import', true);
+  }, [result, route]);
+
+  if (!result) return null;
 
   const { imported, errors } = result;
 

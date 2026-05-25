@@ -1,7 +1,7 @@
 import { createContext } from 'preact';
-import { useContext, useState, useCallback } from 'preact/hooks';
+import { useContext, useState, useCallback, useEffect } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
-import { clearCredentials, getCredentials } from '@/api/client';
+import { clearCredentials, getCredentials, setAuthErrorHandler } from '@/api/client';
 import { listApps } from '@/api/apps';
 
 interface AuthState {
@@ -39,6 +39,11 @@ export function AuthProvider({ children }: { children: ComponentChildren }) {
     clearCredentials();
     setAuth({ isAuthenticated: false });
   }, []);
+
+  useEffect(() => {
+    setAuthErrorHandler(logout);
+    return () => setAuthErrorHandler(null);
+  }, [logout]);
 
   return (
     <AuthContext.Provider value={{ auth, login, logout }}>
