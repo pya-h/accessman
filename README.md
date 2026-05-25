@@ -76,7 +76,7 @@ See [ampanel/README.md](ampanel/README.md) for setup and development details.
 
 ### DevKit (`devkit/`)
 
-`.http` files for testing all API endpoints using IDE HTTP client extensions (e.g., VSCode REST Client). Also includes a self-provisioning test script for verify/metadata workflows.
+`.http` files for testing all API endpoints using IDE HTTP client extensions (e.g., VSCode REST Client). Also includes a database seed script and a self-provisioning test script for verify/metadata workflows.
 
 See [devkit/README.md](devkit/README.md).
 
@@ -89,6 +89,7 @@ npm install
 cp .env.example .env    # configure database URL and security keys
 npm run migration:run
 npm run start:dev       # http://localhost:3000
+npm run seed            # populate DB with realistic sample data
 
 # Panel (separate terminal)
 cd ampanel

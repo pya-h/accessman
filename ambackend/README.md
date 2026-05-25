@@ -103,6 +103,7 @@ npm run test               # Unit tests
 npm run test:e2e           # E2E tests (requires DATABASE_TEST_URL)
 npm run test:cov           # Coverage report
 npm run test:verify        # Run verify/metadata integration test (requires running server)
+npm run seed               # Populate DB with realistic sample data (requires running server)
 
 npm run migration:run      # Run pending migrations
 npm run migration:revert   # Revert last migration
