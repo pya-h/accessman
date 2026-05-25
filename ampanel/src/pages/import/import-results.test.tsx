@@ -171,6 +171,7 @@ describe('ImportResultsPage', () => {
 
     URL.createObjectURL = origCreate;
     URL.revokeObjectURL = origRevoke;
+    vi.restoreAllMocks(); // restore document.createElement spy
   });
 
   it('navigates to /import on "New Import" click', () => {

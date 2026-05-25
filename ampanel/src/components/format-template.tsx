@@ -116,10 +116,14 @@ export function FormatTemplate({ format, mode, scope }: FormatTemplateProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    const text = buildTemplateText(format, fields);
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      const text = buildTemplateText(format, fields);
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard access may be denied in insecure contexts
+    }
   };
 
   return (

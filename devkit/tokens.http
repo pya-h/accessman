@@ -50,6 +50,24 @@ X-Security: {{$dotenv SECURITY_KEY}}
 X-App-Name: {{$dotenv ADMIN_APP_NAME}}
 X-Operator-Key: {{$dotenv OPERATOR_KEY}}
 
+### List tokens — filter by token prefix
+GET {{$dotenv HOST}}/tokens?tokenPrefix=myapp_7f3a
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+### List tokens — sort by userId ascending
+GET {{$dotenv HOST}}/tokens?sortBy=userId&sortOrder=ASC
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
+### List tokens — sort by expiresAt descending, filter expired
+GET {{$dotenv HOST}}/tokens?status=expired&sortBy=expiresAt&sortOrder=DESC
+X-Security: {{$dotenv SECURITY_KEY}}
+X-App-Name: {{$dotenv ADMIN_APP_NAME}}
+X-Operator-Key: {{$dotenv OPERATOR_KEY}}
+
 ### Get token detail by ID
 GET {{$dotenv HOST}}/tokens/1
 X-Security: {{$dotenv SECURITY_KEY}}

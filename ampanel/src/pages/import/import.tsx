@@ -26,14 +26,28 @@ function parseCsvLine(line: string): string[] {
   const result: string[] = [];
   let current = '';
   let inQuotes = false;
-  for (const ch of line) {
-    if (ch === '"') {
-      inQuotes = !inQuotes;
-    } else if (ch === ',' && !inQuotes) {
-      result.push(current.trim());
-      current = '';
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') {
+          current += '"';
+          i++; // skip the second quote of the escaped pair
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        current += ch;
+      }
     } else {
-      current += ch;
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ',') {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += ch;
+      }
     }
   }
   result.push(current.trim());
@@ -197,8 +211,10 @@ export function ImportPage() {
   };
 
   const handleFileInput = (e: Event) => {
-    const file = (e.target as HTMLInputElement).files?.[0];
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
     if (file) handleFile(file);
+    input.value = ''; // reset so re-uploading the same file triggers onChange
   };
 
   const handleAddRow = () => {
@@ -271,8 +287,25 @@ export function ImportPage() {
 
     setSubmitting(true);
     try {
-      const data = format === 'json' ? JSON.parse(content) : content;
-      const result = await importTokens(data, format, mode, scope === 'single' ? appName : undefined);
+      let data: string | unknown[] = format === 'json' ? JSON.parse(content) : content;
+      let sendFormat: ImportFormat = format;
+
+      // POST /import/reissue requires appName per item, but single-app scope
+      // omits it from the input template — inject it before sending
+      if (mode === 'reissue' && scope === 'single' && appName) {
+        if (typeof data === 'string') {
+          const jsonStr = csvToJson(data);
+          if (!jsonStr) {
+            showToast('error', 'Failed to parse CSV data');
+            return;
+          }
+          data = JSON.parse(jsonStr);
+          sendFormat = 'json';
+        }
+        data = (data as Record<string, unknown>[]).map(item => ({ ...item, appName }));
+      }
+
+      const result = await importTokens(data, sendFormat, mode, scope === 'single' ? appName : undefined);
       lastImportResult = result;
       route('/import/results');
     } catch (err: unknown) {
