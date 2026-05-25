@@ -10,9 +10,9 @@ AccessMan is **not** an authentication service -- it governs access tokens that 
 accessman/
   ambackend/     # Backend API service (NestJS + Fastify + PostgreSQL)
   ampanel/       # Admin panel SPA (Preact + Vite)
-  devkit/        # API call templates for development/testing
-  specs/         # Documentation (PRD, TDD, TASKS, etc.)
-  Dockerfile     # Production container (ambackend + ampanel)
+  devkit/        # API call templates and test scripts for development
+  specs/         # Documentation (PRD, TDD, TASKS, etc.) -- gitignored
+  Dockerfile     # Production container (backend + panel)
 ```
 
 ## How It Works
@@ -30,7 +30,7 @@ AccessMan handles issuance, storage, and verification. Consuming apps handle dis
 {appName}_{64_hex_chars}
 ```
 
-Tokens are stored as SHA-256 hashes and returned only once at creation time. Each token is scoped to one user + one app. Operators can optionally provide custom token strings during import.
+Tokens are stored as SHA-256 hashes and returned only once at creation time. Each token is scoped to one user + one app. Operators can optionally provide custom token strings during import (format: `{appName}_{CODE}`, CODE 8-64 chars).
 
 ## Security Model
 
@@ -52,7 +52,10 @@ Key endpoints:
 - `POST /api/import/:appName` -- per-app import (appName from URL)
 - `POST /api/import/reissue` -- re-issue tokens (revoke + issue new, userId required)
 - `GET /api/tokens` -- list/filter tokens (operator)
+- `GET /api/tokens/:id` -- get token detail (operator)
 - `POST /api/tokens/:id/revoke` -- revoke a token (operator)
+- `GET /api/apps` -- list registered apps (operator)
+- `POST /api/apps` -- register a new app (operator)
 
 See [ambackend/README.md](ambackend/README.md) for setup and full API reference.
 
@@ -69,18 +72,74 @@ Operator-facing web interface built with Preact + Vite. Provides visual access t
 
 The panel authenticates using Tier 2 credentials entered at login, stored in `sessionStorage`. No server-side sessions.
 
+See [ampanel/README.md](ampanel/README.md) for setup and development details.
+
 ### DevKit (`devkit/`)
 
-`.http` files for testing all API endpoints using IDE HTTP client extensions (e.g., VSCode REST Client). See [devkit/README.md](devkit/README.md).
+`.http` files for testing all API endpoints using IDE HTTP client extensions (e.g., VSCode REST Client). Also includes a self-provisioning test script for verify/metadata workflows.
+
+See [devkit/README.md](devkit/README.md).
 
 ## Quick Start
 
 ```bash
+# Backend
 cd ambackend
 npm install
 cp .env.example .env    # configure database URL and security keys
 npm run migration:run
 npm run start:dev       # http://localhost:3000
+
+# Panel (separate terminal)
+cd ampanel
+npm install
+npm run dev             # http://localhost:5173, proxies /api to backend
+```
+
+## Testing
+
+```bash
+# Backend unit tests (80 tests)
+cd ambackend && npm test
+
+# Backend E2E tests (77 tests, requires DATABASE_TEST_URL in .env)
+cd ambackend && npm run test:e2e
+
+# Verify/metadata integration test (requires running server)
+cd ambackend && npm run test:verify
+
+# Panel unit tests (25 tests)
+cd ampanel && npm test
+
+# Panel Playwright E2E tests (63 tests, requires PostgreSQL)
+cd ampanel && npm run test:e2e
+```
+
+## Deployment
+
+### Docker (recommended)
+
+```bash
+docker build -t accessman .
+docker run -p 3000:3000 \
+  -e DATABASE_URL=postgresql://... \
+  -e SECURITY_KEY=... \
+  -e OPERATOR_KEY=... \
+  accessman
+```
+
+The multi-stage Dockerfile builds both panel and backend, copies the panel's static files into the backend's `public/` directory, and runs migrations automatically on container startup. Both API and panel are served from the same origin on port 3000.
+
+### Manual
+
+```bash
+# Build panel and copy to backend
+cd ampanel && npm run push
+
+# Build and start backend
+cd ambackend && npm run build
+npm run migration:run
+npm run start:prod
 ```
 
 ## Documentation
@@ -93,16 +152,3 @@ npm run start:dev       # http://localhost:3000
 | [specs/PANEL_PRD.md](specs/PANEL_PRD.md) | Admin panel requirements |
 | [specs/TASKS.md](specs/TASKS.md) | Implementation task tracking |
 | [specs/NOTES.md](specs/NOTES.md) | Side notes and suggestions |
-
-## Docker
-
-```bash
-docker build -t accessman .
-docker run -p 3000:3000 \
-  -e DATABASE_URL=postgresql://... \
-  -e SECURITY_KEY=... \
-  -e OPERATOR_KEY=... \
-  accessman
-```
-
-Migrations run automatically on container startup.

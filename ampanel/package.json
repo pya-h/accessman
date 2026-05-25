@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "push": "npm run build && cp -r dist/* ../ambackend/public/"
   },
   "dependencies": {
@@ -16,6 +17,7 @@
     "preact-iso": "^2.6.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@preact/preset-vite": "^2.9.4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/preact": "^3.2.4",

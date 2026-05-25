@@ -102,6 +102,7 @@ npm run start:prod         # Run compiled output
 npm run test               # Unit tests
 npm run test:e2e           # E2E tests (requires DATABASE_TEST_URL)
 npm run test:cov           # Coverage report
+npm run test:verify        # Run verify/metadata integration test (requires running server)
 
 npm run migration:run      # Run pending migrations
 npm run migration:revert   # Revert last migration
@@ -167,20 +168,33 @@ src/
 Unit tests mock the database layer and cover all service methods. E2E tests spin up a real NestJS app with a test database and test all endpoints including security guards.
 
 ```bash
-# Run all unit tests
-npm run test
+# Unit tests (80 tests)
+npm test
 
-# Run E2E tests (requires a test database)
+# E2E tests (77 tests, requires DATABASE_TEST_URL in .env)
 npm run test:e2e
+
+# Verify/metadata integration test (requires running server + devkit/.env)
+npm run test:verify
 ```
 
-## Docker
+## Deployment
 
-The service can be built and run via the Dockerfile in the project root:
+### Docker (recommended)
+
+The service is built and deployed via the multi-stage Dockerfile in the project root. The container bundles the backend, panel static files, and runs migrations on startup.
 
 ```bash
-docker build -f ../Dockerfile -t accessman ..
+docker build -t accessman ..
 docker run -p 3000:3000 --env-file .env accessman
 ```
 
-The container runs migrations automatically on startup before starting the server.
+### Manual
+
+```bash
+npm run build
+npm run migration:run
+npm run start:prod
+```
+
+In production, the panel's static files should be placed in `public/` (done automatically by `ampanel`'s `npm run push` or by the Docker build).

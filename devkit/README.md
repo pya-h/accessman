@@ -16,6 +16,21 @@ API call templates for testing AccessMan endpoints during development. Uses `.ht
 | `apps.http` | App management: list apps, create app, duplicate test |
 | `import.http` | All import operations: JSON/CSV, per-app, duplicate, custom token import, re-issue |
 | `tokens.http` | Token verify, metadata update, list/filter, detail, revoke |
+| `test-verify-metadata.js` | Self-provisioning test script for verify, metadata, and lastVerifiedAt |
+
+## Test Script
+
+Run the verify/metadata test script against a running server:
+
+```bash
+# From ambackend/
+npm run test:verify
+
+# Or directly
+node devkit/test-verify-metadata.js
+```
+
+The script is self-provisioning — it imports its own tokens, then tests verify, metadata CRUD, rejection cases, and lastVerifiedAt tracking. Reads connection details from `devkit/.env`.
 
 ## Variables
 

@@ -8,7 +8,8 @@ Operator-facing web interface for AccessMan. Provides visual access to all Tier 
 - **Build**: Vite 6
 - **Styling**: CSS Modules + CSS custom properties
 - **Language**: TypeScript
-- **Tests**: Vitest + Testing Library
+- **Unit Tests**: Vitest + Testing Library
+- **E2E Tests**: Playwright
 
 No other runtime dependencies. Uses native `fetch` and vanilla TypeScript utilities.
 
@@ -27,8 +28,9 @@ The dev server proxies `/api` requests to `http://localhost:3000`, so you need t
 npm run dev        # Development server with HMR
 npm run build      # Type-check + production build (outputs to dist/)
 npm run preview    # Preview production build locally
-npm run test       # Run tests (Vitest)
-npm run test:watch # Run tests in watch mode
+npm run test       # Run unit tests (Vitest)
+npm run test:watch # Run unit tests in watch mode
+npm run test:e2e   # Run Playwright E2E tests
 npm run push       # Build + copy output to ambackend/public/
 ```
 
@@ -78,6 +80,12 @@ src/
     use-debounce.ts              # Debounce hook
     settings.ts                  # UI preferences (localStorage)
     csv-export.ts                # CSV download utility
+
+e2e/
+  global-setup.ts                # Builds backend+panel, starts server on :3100, seeds data
+  global-teardown.ts             # Stops test server
+  prepare-db.cjs                 # Syncs schema via TypeORM from backend entities
+  *.spec.ts                      # Test suites (login, tokens, import, apps, settings)
 ```
 
 ## Authentication
@@ -92,12 +100,36 @@ X-Operator-Key: {operator key}
 
 If any API call returns 401/403, credentials are cleared and the user is redirected to login.
 
-## Deployment
+## Testing
 
-The panel is a static SPA. In production, it is served by the backend via `@nestjs/serve-static` — both panel and API run from the same container on the same origin. No CORS configuration needed.
+### Unit Tests (25 tests)
+
+Component and utility tests using Vitest + Testing Library.
 
 ```bash
-# Build and copy to backend
+npm test
+```
+
+### Playwright E2E Tests (63 tests)
+
+Full-stack browser tests covering login, token management, import workflows, app management, settings, and error paths. The test suite:
+
+- Builds and starts a real backend on port 3100 (via `global-setup.ts`)
+- Syncs a test database schema from backend entities
+- Seeds test data before running
+- Runs in headless Chromium
+
+```bash
+# Requires PostgreSQL and DATABASE_TEST_URL configured in ambackend/.env
+npm run test:e2e
+```
+
+## Deployment
+
+The panel is a static SPA. In production, it is served by the backend via `@nestjs/serve-static` -- both panel and API run from the same container on the same origin. No CORS configuration needed.
+
+```bash
+# Build and copy to backend's public/ directory
 npm run push
 
 # Or build via Docker (from project root)

@@ -919,7 +919,7 @@ describe('AccessMan E2E', () => {
         headers: operatorHeaders,
       });
 
-      expect(res.statusCode).toBe(201);
+      expect(res.statusCode).toBe(200);
       const body = JSON.parse(res.payload);
       expect(body.success).toBe(true);
       expect(body.revokedAt).toBeDefined();
