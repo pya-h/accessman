@@ -7,17 +7,15 @@ import { ToastContainer } from '@/components/toast';
 import { LoginPage } from '@/pages/login/login';
 import { TokenListPage } from '@/pages/tokens/token-list';
 import { TokenDetailPage } from '@/pages/tokens/token-detail';
+import { AppListPage } from '@/pages/apps/app-list';
+import { ImportPage } from '@/pages/import/import';
+import { ImportResultsPage } from '@/pages/import/import-results';
 
 applySettings(getSettings());
 
-function PlaceholderPage({ name }: { name: string }) {
-  return <div><h2>{name}</h2></div>;
+function SettingsPage() {
+  return <div><h2>Settings</h2></div>;
 }
-
-function AppListPage() { return <PlaceholderPage name="Apps" />; }
-function ImportPage() { return <PlaceholderPage name="Import" />; }
-function ImportResultsPage() { return <PlaceholderPage name="Import Results" />; }
-function SettingsPage() { return <PlaceholderPage name="Settings" />; }
 
 function AuthenticatedRoutes() {
   return (

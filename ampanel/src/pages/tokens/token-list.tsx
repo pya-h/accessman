@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'preact/hooks';
+import { useState, useMemo, useEffect } from 'preact/hooks';
 import { useLocation } from 'preact-iso';
 import { listTokens, revokeToken } from '@/api/tokens';
 import type { TokenRecord, TokenListParams } from '@/api/tokens';
@@ -71,10 +71,16 @@ export function TokenListPage() {
 
   const { data: apps } = useQuery(() => listApps(), []);
 
+  // Sync debounced userId to URL (replaceState to avoid history pollution)
+  useEffect(() => {
+    if (debouncedUserId !== q.userId) {
+      route(`/tokens${buildSearch({ ...q, userId: debouncedUserId, page: 1 })}`, true);
+    }
+  }, [debouncedUserId]);
+
   const navigate = (overrides: Partial<typeof q>) => {
     const next = { ...q, ...overrides };
-    // reset page to 1 when filters change
-    if ('userId' in overrides || 'appName' in overrides || 'status' in overrides) {
+    if ('appName' in overrides || 'status' in overrides) {
       next.page = 1;
     }
     route(`/tokens${buildSearch(next)}`);
@@ -165,10 +171,7 @@ export function TokenListPage() {
       <div class={styles.toolbar}>
         <SearchInput
           value={userIdInput}
-          onInput={(v) => {
-            setUserIdInput(v);
-            navigate({ userId: v });
-          }}
+          onInput={setUserIdInput}
           placeholder="Search by User ID..."
         />
 
