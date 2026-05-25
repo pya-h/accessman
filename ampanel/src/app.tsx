@@ -2,12 +2,14 @@ import { LocationProvider, Router, Route } from 'preact-iso';
 import { applySettings, getSettings } from '@/lib/settings';
 import { AuthProvider } from '@/auth/auth-context';
 import { AuthGuard } from '@/auth/auth-guard';
+import { Shell } from '@/components/layout/shell';
+import { ToastContainer } from '@/components/toast';
 import { LoginPage } from '@/pages/login/login';
 
 applySettings(getSettings());
 
 function PlaceholderPage({ name }: { name: string }) {
-  return <div style={{ padding: 'var(--space-6)' }}><h2>{name}</h2></div>;
+  return <div><h2>{name}</h2></div>;
 }
 
 function TokenListPage() { return <PlaceholderPage name="Tokens" />; }
@@ -20,16 +22,18 @@ function SettingsPage() { return <PlaceholderPage name="Settings" />; }
 function AuthenticatedRoutes() {
   return (
     <AuthGuard>
-      <Router>
-        <Route path="/" component={TokenListPage} />
-        <Route path="/tokens" component={TokenListPage} />
-        <Route path="/tokens/:id" component={TokenDetailPage} />
-        <Route path="/apps" component={AppListPage} />
-        <Route path="/import" component={ImportPage} />
-        <Route path="/import/results" component={ImportResultsPage} />
-        <Route path="/settings" component={SettingsPage} />
-        <Route default component={TokenListPage} />
-      </Router>
+      <Shell>
+        <Router>
+          <Route path="/" component={TokenListPage} />
+          <Route path="/tokens" component={TokenListPage} />
+          <Route path="/tokens/:id" component={TokenDetailPage} />
+          <Route path="/apps" component={AppListPage} />
+          <Route path="/import" component={ImportPage} />
+          <Route path="/import/results" component={ImportResultsPage} />
+          <Route path="/settings" component={SettingsPage} />
+          <Route default component={TokenListPage} />
+        </Router>
+      </Shell>
     </AuthGuard>
   );
 }
@@ -42,6 +46,7 @@ export function App() {
           <Route path="/login" component={LoginPage} />
           <Route default component={AuthenticatedRoutes} />
         </Router>
+        <ToastContainer />
       </LocationProvider>
     </AuthProvider>
   );

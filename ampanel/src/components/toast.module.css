@@ -1,0 +1,73 @@
+.container {
+  position: fixed;
+  top: var(--space-4);
+  right: var(--space-4);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 380px;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--border-radius);
+  font-size: 0.875rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  animation: slideIn 200ms ease;
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.removing {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.success {
+  background: color-mix(in srgb, var(--color-status-active) 15%, var(--color-bg-card));
+  border: 1px solid color-mix(in srgb, var(--color-status-active) 30%, transparent);
+  color: var(--color-status-active);
+}
+
+.error {
+  background: color-mix(in srgb, var(--color-status-revoked) 15%, var(--color-bg-card));
+  border: 1px solid color-mix(in srgb, var(--color-status-revoked) 30%, transparent);
+  color: var(--color-status-revoked);
+}
+
+.warning {
+  background: color-mix(in srgb, var(--color-status-expired) 15%, var(--color-bg-card));
+  border: 1px solid color-mix(in srgb, var(--color-status-expired) 30%, transparent);
+  color: var(--color-status-expired);
+}
+
+.icon {
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.message {
+  flex: 1;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 767px) {
+  .container {
+    left: var(--space-4);
+    max-width: none;
+  }
+}

@@ -1,0 +1,80 @@
+.wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-lg);
+  background: var(--color-bg-card);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.th {
+  position: sticky;
+  top: 0;
+  background: var(--color-bg-card);
+  border-bottom: 2px solid var(--color-border);
+  padding: var(--table-density) var(--space-3);
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.thRight {
+  text-align: right;
+}
+
+.td {
+  padding: var(--table-density) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+.tdRight {
+  text-align: right;
+}
+
+.tdMono {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+}
+
+.row:nth-child(even) {
+  background: color-mix(in srgb, var(--color-bg-page) 50%, var(--color-bg-card));
+}
+
+.rowClickable {
+  cursor: pointer;
+}
+
+.rowClickable:hover {
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+}
+
+.stickyCol {
+  position: sticky;
+  left: 0;
+  background: inherit;
+  z-index: 1;
+}
+
+/* Loading skeleton */
+.skeleton {
+  height: 1em;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-text-secondary) 15%, transparent);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
