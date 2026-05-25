@@ -9,6 +9,9 @@
  * Run: npm run test:e2e
  */
 import { createHash, randomBytes, randomUUID } from 'crypto';
+import { mkdtempSync, writeFileSync, rmSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
 import { Test } from '@nestjs/testing';
 import {
   FastifyAdapter,
@@ -1594,5 +1597,139 @@ describe('AccessMan E2E', () => {
         expect(JSON.parse(vRes.payload).valid).toBe(expected);
       }
     });
+  });
+});
+
+// ─── Static Serving Integration ────────────────────────────────────────
+//
+// Note: ServeStaticModule's provider factory resolves the loader before
+// createNestApplication() sets the HTTP adapter, so in tests it falls back
+// to NoopLoader. To test the actual static-serving behaviour we register
+// @fastify/static directly on the Fastify instance — this mirrors what the
+// FastifyLoader does in production (see node_modules/@nestjs/serve-static/
+// dist/loaders/fastify.loader.js).
+
+describe('Static Serving Integration', () => {
+  let app: NestFastifyApplication;
+  let tmpDir: string;
+
+  const operatorHeaders = {
+    'x-security': SECURITY_KEY,
+    'x-app-name': ADMIN_APP,
+    'x-operator-key': OPERATOR_KEY,
+  };
+
+  beforeAll(async () => {
+    process.env.SECURITY_KEY = SECURITY_KEY;
+    process.env.OPERATOR_KEY = OPERATOR_KEY;
+    process.env.ADMIN_APP_NAME = ADMIN_APP;
+    process.env.DEFAULT_TOKEN_EXPIRY_DAYS = '365';
+
+    // Create temp public directory with index.html
+    tmpDir = mkdtempSync(join(tmpdir(), 'accessman-static-'));
+    writeFileSync(
+      join(tmpDir, 'index.html'),
+      '<!DOCTYPE html><html><body>AccessMan Panel</body></html>',
+    );
+
+    const moduleFixture = await Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          load: [securityConfig, tokenConfig],
+        }),
+        TypeOrmModule.forRoot({
+          type: 'postgres',
+          url:
+            process.env.DATABASE_TEST_URL ||
+            'postgresql://postgres:postgres@localhost:5432/accessman_test',
+          entities: [AppEntity, TokenEntity],
+          synchronize: true,
+        }),
+        AppsModule,
+        TokensModule,
+        ImportModule,
+      ],
+    }).compile();
+
+    app = moduleFixture.createNestApplication<NestFastifyApplication>(
+      new FastifyAdapter(),
+    );
+
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
+    app.setGlobalPrefix('api');
+
+    // Register @fastify/static + SPA fallback (mirrors ServeStaticModule's
+    // FastifyLoader with fallthrough: true)
+    const fastify = app.getHttpAdapter().getInstance();
+    const fastifyStatic = require('@fastify/static');
+
+    await fastify.register(fastifyStatic, {
+      root: tmpDir,
+      wildcard: false,
+    });
+
+    // SPA fallback: wildcard GET serves index.html for non-file routes
+    // (mirrors FastifyLoader's app.get('*', renderFn) with fallthrough)
+    fastify.get('*', (_req: any, reply: any) => {
+      reply.type('text/html').sendFile('index.html');
+    });
+
+    fastify.addContentTypeParser(
+      'text/csv',
+      { parseAs: 'string' },
+      (_req: any, body: string, done: (err: null, body: string) => void) => {
+        done(null, body);
+      },
+    );
+
+    await app.init();
+    await fastify.ready();
+
+    // Seed admin app
+    const dataSource = moduleFixture.get(DataSource);
+    await dataSource.query(
+      `INSERT INTO "apps" ("name") VALUES ($1) ON CONFLICT DO NOTHING`,
+      [ADMIN_APP],
+    );
+  });
+
+  afterAll(async () => {
+    await app.close();
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('GET / → 200 with HTML content (panel served at root)', async () => {
+    const res = await app.inject({ method: 'GET', url: '/' });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toContain('text/html');
+    expect(res.payload).toContain('AccessMan Panel');
+  });
+
+  it('GET /login → 200 with HTML content (SPA fallback)', async () => {
+    const res = await app.inject({ method: 'GET', url: '/login' });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toContain('text/html');
+    expect(res.payload).toContain('AccessMan Panel');
+  });
+
+  it('GET /tokens → 200 with HTML content (SPA deep link)', async () => {
+    const res = await app.inject({ method: 'GET', url: '/tokens' });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toContain('text/html');
+    expect(res.payload).toContain('AccessMan Panel');
+  });
+
+  it('GET /api/apps → 200 with JSON (API not intercepted by static serving)', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/apps',
+      headers: operatorHeaders,
+    });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.payload);
+    expect(Array.isArray(body)).toBe(true);
   });
 });

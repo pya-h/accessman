@@ -53,7 +53,7 @@ export class TokensService {
       return { valid: false, reason: 'revoked' };
     }
 
-    if (token.expiresAt && token.expiresAt < new Date()) {
+    if (token.expiresAt && token.expiresAt <= new Date()) {
       return { valid: false, reason: 'expired' };
     }
 
@@ -93,7 +93,7 @@ export class TokensService {
       throw new BadRequestException('Token is revoked');
     }
 
-    if (token.expiresAt && token.expiresAt < new Date()) {
+    if (token.expiresAt && token.expiresAt <= new Date()) {
       throw new BadRequestException('Token is expired');
     }
 

@@ -20,6 +20,7 @@ import tokenConfig from './config/token.config';
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public'),
       exclude: ['/api/(.*)'],
+      serveStaticOptions: { fallthrough: true },
     }),
     AppsModule,
     TokensModule,
