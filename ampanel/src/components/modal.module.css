@@ -1,25 +1,27 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 50;
   padding: var(--space-4);
-  animation: fadeIn 200ms ease;
+  animation: backdropIn 250ms ease;
 }
 
 .dialog {
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-lg);
+  border-radius: var(--border-radius-xl);
+  box-shadow: var(--shadow-xl);
   width: 100%;
   max-width: 480px;
   max-height: 90vh;
   overflow-y: auto;
-  animation: scaleIn 200ms ease;
+  animation: dialogIn 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .header {
@@ -31,13 +33,14 @@
 }
 
 .title {
-  font-size: 1.125rem;
-  font-weight: 600;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .closeBtn {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -47,11 +50,19 @@
   cursor: pointer;
   border-radius: var(--border-radius);
   font-size: 0.875rem;
-  transition: background var(--transition-fast);
+  transition:
+    background var(--transition-normal),
+    color var(--transition-normal),
+    transform var(--transition-fast);
 }
 
 .closeBtn:hover {
   background: color-mix(in srgb, var(--color-text-secondary) 10%, transparent);
+  color: var(--color-text-primary);
+}
+
+.closeBtn:active {
+  transform: scale(0.9);
 }
 
 .body {
@@ -69,19 +80,19 @@
   border-top: 1px solid var(--color-border);
 }
 
-@keyframes fadeIn {
+@keyframes backdropIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-@keyframes scaleIn {
+@keyframes dialogIn {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.92) translateY(8px);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1) translateY(0);
   }
 }
 
@@ -94,8 +105,8 @@
   .dialog {
     max-width: none;
     max-height: 100vh;
-    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
-    animation: slideUp 200ms ease;
+    border-radius: var(--border-radius-xl) var(--border-radius-xl) 0 0;
+    animation: slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   @keyframes slideUp {

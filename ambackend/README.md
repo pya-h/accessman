@@ -71,6 +71,15 @@ All API requests require two headers: `X-Security` (shared key) and `X-App-Name`
 | `GET` | `/api/apps` | List all registered apps |
 | `POST` | `/api/apps` | Register a new app |
 
+### Import Fields
+
+| Field | Required | Description |
+|---|---|---|
+| `userId` | no (import), **yes** (reissue) | User identifier. Auto-generated UUID if omitted during import |
+| `appName` | yes (global), no (per-app URL) | Target app name. Inferred from URL for `/api/import/:appName` |
+| `expiresAt` | no | ISO 8601 date. No expiry if omitted |
+| `token` | no | Custom token string. Auto-generated if omitted. Format: `{appName}_{CODE}`, CODE 8-64 chars |
+
 ### Custom Token Import
 
 All import endpoints support an optional `token` field per item, allowing operators to provide their own token strings instead of having the service auto-generate them. Custom tokens must follow the format `{appName}_{CODE}` where CODE is 8-64 characters.
@@ -145,8 +154,9 @@ src/
     import.controller.ts
     import.module.ts
     dto/
-      import-item.dto.ts
-      import-item-per-app.dto.ts
+      import-item.dto.ts         # userId optional
+      import-item-per-app.dto.ts # userId optional, no appName
+      reissue-item.dto.ts        # userId required
 
   migrations/
     <timestamp>-Init.ts      # Schema + admin app seed

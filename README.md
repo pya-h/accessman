@@ -9,10 +9,10 @@ AccessMan is **not** an authentication service -- it governs access tokens that 
 ```
 accessman/
   ambackend/     # Backend API service (NestJS + Fastify + PostgreSQL)
-  ampanel/       # Admin panel SPA (Preact + Vite) -- planned
+  ampanel/       # Admin panel SPA (Preact + Vite)
   devkit/        # API call templates for development/testing
   specs/         # Documentation (PRD, TDD, TASKS, etc.)
-  Dockerfile     # Production container for ambackend
+  Dockerfile     # Production container (ambackend + ampanel)
 ```
 
 ## How It Works
@@ -48,14 +48,15 @@ The core API service. NestJS 11 with Fastify 5, PostgreSQL via TypeORM.
 Key endpoints:
 - `POST /api/tokens/verify` -- verify a token
 - `PATCH /api/tokens/metadata` -- update token metadata
-- `POST /api/import` -- bulk import tokens (JSON/CSV)
-- `POST /api/import/reissue` -- re-issue tokens (revoke + issue new)
+- `POST /api/import` -- bulk import tokens (JSON/CSV, userId optional)
+- `POST /api/import/:appName` -- per-app import (appName from URL)
+- `POST /api/import/reissue` -- re-issue tokens (revoke + issue new, userId required)
 - `GET /api/tokens` -- list/filter tokens (operator)
 - `POST /api/tokens/:id/revoke` -- revoke a token (operator)
 
 See [ambackend/README.md](ambackend/README.md) for setup and full API reference.
 
-### Admin Panel (`ampanel/`) -- Planned
+### Admin Panel (`ampanel/`)
 
 Operator-facing web interface built with Preact + Vite. Provides visual access to all operator workflows:
 
@@ -66,7 +67,7 @@ Operator-facing web interface built with Preact + Vite. Provides visual access t
 - **Revocation**: revoke tokens from list or detail view with confirmation
 - **Settings**: theme (light/dark), font size, table density
 
-The panel authenticates using Tier 2 credentials entered at login, stored in `sessionStorage`. No server-side sessions. See [specs/PANEL_PRD.md](specs/PANEL_PRD.md) for full requirements.
+The panel authenticates using Tier 2 credentials entered at login, stored in `sessionStorage`. No server-side sessions.
 
 ### DevKit (`devkit/`)
 

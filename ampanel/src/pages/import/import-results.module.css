@@ -2,38 +2,49 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  animation: fadeIn var(--transition-slow) ease;
+  animation: pageIn 400ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .title {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 1.375rem;
+  font-weight: 700;
   margin: 0;
+  letter-spacing: -0.02em;
 }
 
 .warning {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  border: 1px solid #ca8a04;
-  border-radius: var(--border-radius);
-  background: rgba(202, 138, 4, 0.08);
-  color: #ca8a04;
+  border: 1px solid color-mix(in srgb, var(--color-status-expired) 40%, transparent);
+  border-radius: var(--border-radius-lg);
+  background: color-mix(in srgb, var(--color-status-expired) 8%, transparent);
+  color: var(--color-status-expired);
   font-size: 0.875rem;
   font-weight: 500;
+  animation: warningIn 500ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes warningIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .section {
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
+  border-radius: var(--border-radius-lg);
   overflow: hidden;
+  box-shadow: var(--shadow-xs);
 }
 
 .errorSection {
-  border-color: #ef4444;
+  border-color: color-mix(in srgb, var(--color-status-revoked) 40%, transparent);
 }
 
 .sectionHeader {
@@ -43,20 +54,26 @@
   width: 100%;
   padding: var(--space-3) var(--space-4);
   border: none;
-  background: var(--color-bg-card);
+  background: var(--color-bg-subtle);
   color: var(--color-text-primary);
   font-size: 0.875rem;
   font-family: inherit;
   cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.sectionHeader:hover {
+  background: color-mix(in srgb, var(--color-bg-subtle) 80%, var(--color-accent-subtle));
 }
 
 .sectionTitle {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .chevron {
   font-size: 1rem;
   color: var(--color-text-secondary);
+  transition: transform var(--transition-normal);
 }
 
 .sectionActions {
@@ -74,13 +91,14 @@
   background: none;
   color: var(--color-text-primary);
   font-size: 0.8125rem;
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all var(--transition-normal);
 }
 
 .actionBtn:hover {
-  background: var(--color-bg-page);
+  background: var(--color-accent-subtle);
   border-color: var(--color-accent);
   color: var(--color-accent);
 }
@@ -101,19 +119,24 @@
   background: none;
   color: var(--color-accent);
   font-size: 0.75rem;
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  padding: 0;
+  padding: 2px 6px;
+  border-radius: var(--border-radius);
   opacity: 0.6;
-  transition: opacity var(--transition-fast);
+  transition:
+    opacity var(--transition-normal),
+    background var(--transition-normal);
 }
 
 .copyBtn:hover {
   opacity: 1;
+  background: var(--color-accent-subtle);
 }
 
 .errorReason {
-  color: #ef4444;
+  color: var(--color-status-revoked);
 }
 
 .empty {
@@ -135,14 +158,17 @@
   background: none;
   color: var(--color-text-primary);
   font-size: 0.875rem;
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all var(--transition-normal);
 }
 
 .navBtn:hover {
   border-color: var(--color-accent);
   color: var(--color-accent);
+  background: var(--color-accent-subtle);
+  transform: translateY(-1px);
 }
 
 @media (max-width: 768px) {

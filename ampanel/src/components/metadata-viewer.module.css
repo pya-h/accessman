@@ -1,13 +1,13 @@
 .container {
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
+  border-radius: var(--border-radius-lg);
   overflow: hidden;
 }
 
 .tabs {
   display: flex;
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg-page);
+  background: var(--color-bg-subtle);
 }
 
 .tab {
@@ -17,9 +17,12 @@
   background: none;
   color: var(--color-text-secondary);
   font-size: 0.8125rem;
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: color var(--transition-fast), border-color var(--transition-fast);
+  transition:
+    color var(--transition-normal),
+    border-color var(--transition-normal);
 }
 
 .tab:hover {
@@ -29,6 +32,7 @@
 .tabActive {
   color: var(--color-accent);
   border-bottom-color: var(--color-accent);
+  font-weight: 600;
 }
 
 /* Raw tab */
@@ -38,7 +42,7 @@
   justify-content: space-between;
   padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg-page);
+  background: var(--color-bg-subtle);
 }
 
 .toggleCompact {
@@ -48,13 +52,17 @@
   background: none;
   color: var(--color-text-secondary);
   font-size: 0.75rem;
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: background var(--transition-fast);
+  transition:
+    background var(--transition-normal),
+    border-color var(--transition-normal);
 }
 
 .toggleCompact:hover {
   background: var(--color-bg-card);
+  border-color: var(--color-border-hover);
 }
 
 .copyBtn {
@@ -64,13 +72,19 @@
   background: none;
   color: var(--color-text-secondary);
   font-size: 0.75rem;
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: background var(--transition-fast);
+  transition:
+    background var(--transition-normal),
+    color var(--transition-normal),
+    border-color var(--transition-normal);
 }
 
 .copyBtn:hover {
-  background: var(--color-bg-card);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 
 .rawContent {
@@ -93,7 +107,12 @@
 }
 
 .kvRow {
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  transition: background var(--transition-fast);
+}
+
+.kvRow:hover {
+  background: var(--color-accent-subtle);
 }
 
 .kvRow:last-child {
@@ -102,13 +121,13 @@
 
 .kvKey {
   padding: var(--space-2) var(--space-3);
-  font-weight: 500;
+  font-weight: 600;
   color: var(--color-text-secondary);
   font-size: 0.8125rem;
   white-space: nowrap;
   vertical-align: top;
   width: 140px;
-  background: var(--color-bg-page);
+  background: var(--color-bg-subtle);
 }
 
 .kvValue {
@@ -146,14 +165,18 @@
   background: none;
   color: var(--color-accent);
   font-size: 0.75rem;
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background var(--transition-fast);
+  transition:
+    background var(--transition-normal),
+    border-color var(--transition-normal);
 }
 
 .viewBtn:hover {
-  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent);
 }
 
 .empty {

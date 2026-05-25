@@ -3,6 +3,8 @@
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius-lg);
   background: var(--color-bg-card);
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow var(--transition-normal);
 }
 
 .table {
@@ -14,15 +16,15 @@
 .th {
   position: sticky;
   top: 0;
-  background: var(--color-bg-card);
-  border-bottom: 2px solid var(--color-border);
+  background: var(--color-bg-subtle);
+  border-bottom: 1px solid var(--color-border);
   padding: var(--table-density) var(--space-3);
   text-align: left;
   font-weight: 600;
   color: var(--color-text-secondary);
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   white-space: nowrap;
   z-index: 1;
 }
@@ -33,7 +35,7 @@
 
 .td {
   padding: var(--table-density) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
   color: var(--color-text-primary);
   white-space: nowrap;
 }
@@ -47,17 +49,23 @@
   font-size: 0.8em;
 }
 
-.row:nth-child(even) {
-  background: color-mix(in srgb, var(--color-bg-page) 50%, var(--color-bg-card));
+.row {
+  transition: background var(--transition-fast);
+}
+
+.row:last-child .td {
+  border-bottom: none;
 }
 
 .rowClickable {
   cursor: pointer;
-  transition: background var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .rowClickable:hover {
-  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+  background: var(--color-accent-subtle);
+}
+
+.rowClickable:hover .td:first-child {
   box-shadow: inset 3px 0 0 var(--color-accent);
 }
 
@@ -71,15 +79,15 @@
 /* Loading skeleton */
 .skeleton {
   height: 1em;
-  border-radius: 4px;
+  border-radius: 6px;
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--color-text-secondary) 10%, transparent) 25%,
-    color-mix(in srgb, var(--color-text-secondary) 20%, transparent) 50%,
-    color-mix(in srgb, var(--color-text-secondary) 10%, transparent) 75%
+    color-mix(in srgb, var(--color-text-secondary) 8%, transparent) 0%,
+    color-mix(in srgb, var(--color-text-secondary) 16%, transparent) 50%,
+    color-mix(in srgb, var(--color-text-secondary) 8%, transparent) 100%
   );
   background-size: 200% 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
+  animation: shimmer 1.8s ease-in-out infinite;
 }
 
 @keyframes shimmer {
