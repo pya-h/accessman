@@ -204,6 +204,11 @@
     width: 100%;
   }
 
+  .toolbarSearch > * {
+    flex: 1;
+    min-width: 0;
+  }
+
   .toolbarControls {
     display: flex;
     gap: var(--space-2);

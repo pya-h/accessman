@@ -1,7 +1,7 @@
 import { createContext } from 'preact';
 import { useContext, useState, useCallback, useEffect } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
-import { clearCredentials, getCredentials, setAuthErrorHandler } from '@/api/client';
+import { clearCredentials, getCredentials, saveCredentials, setAuthErrorHandler } from '@/api/client';
 import { listApps } from '@/api/apps';
 
 interface AuthState {
@@ -10,7 +10,7 @@ interface AuthState {
 
 interface AuthContextValue {
   auth: AuthState;
-  login: (securityKey: string, operatorKey: string) => Promise<void>;
+  login: (securityKey: string, operatorKey: string, remember: boolean) => Promise<void>;
   logout: () => void;
 }
 
@@ -21,9 +21,8 @@ export function AuthProvider({ children }: { children: ComponentChildren }) {
     isAuthenticated: getCredentials() !== null,
   }));
 
-  const login = useCallback(async (securityKey: string, operatorKey: string) => {
-    sessionStorage.setItem('am_security_key', securityKey);
-    sessionStorage.setItem('am_operator_key', operatorKey);
+  const login = useCallback(async (securityKey: string, operatorKey: string, remember: boolean) => {
+    saveCredentials(securityKey, operatorKey, remember);
 
     try {
       await listApps();

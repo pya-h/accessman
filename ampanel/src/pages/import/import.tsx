@@ -126,11 +126,30 @@ export function ImportPage() {
   const [submitting, setSubmitting] = useState(false);
   const [addRowOpen, setAddRowOpen] = useState(false);
   const [rowForm, setRowForm] = useState<Record<string, string>>({});
+  const [misformatOpen, setMisformatOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { data: apps } = useQuery(() => listApps(), []);
 
   const fields = getFields(scope, mode);
+
+  const showMisformatWarning = (onReset: () => void) => {
+    setPendingAction(() => onReset);
+    setMisformatOpen(true);
+  };
+
+  const handleMisformatReset = () => {
+    setContent('');
+    pendingAction?.();
+    setMisformatOpen(false);
+    setPendingAction(null);
+  };
+
+  const handleMisformatDismiss = () => {
+    setMisformatOpen(false);
+    setPendingAction(null);
+  };
 
   const handleFormatChange = (newFormat: ImportFormat) => {
     if (newFormat === format) return;
@@ -144,8 +163,13 @@ export function ImportPage() {
       }
       if (converted !== null) {
         setContent(converted);
+        setFormat(newFormat);
         showToast('success', `Converted to ${newFormat.toUpperCase()}`);
+        return;
       }
+      // Conversion failed — content is misformatted
+      showMisformatWarning(() => setFormat(newFormat));
+      return;
     }
     setFormat(newFormat);
   };
@@ -182,39 +206,60 @@ export function ImportPage() {
     setAddRowOpen(true);
   };
 
+  const appendRow = (row: Record<string, string>) => {
+    if (format === 'json') {
+      try {
+        const arr = JSON.parse(content);
+        if (Array.isArray(arr)) {
+          arr.push(row);
+          setContent(JSON.stringify(arr, null, 2));
+          return true;
+        }
+      } catch {
+        // misformatted
+      }
+      return false;
+    } else {
+      const fieldNames = fields.map(f => f.name);
+      if (!content.trim()) {
+        const header = fieldNames.join(',');
+        const values = fieldNames.map(f => row[f] || '').join(',');
+        setContent(`${header}\n${values}`);
+        return true;
+      }
+      const lines = content.trim().split('\n');
+      if (lines.length < 1) return false;
+      const headers = parseCsvLine(lines[0]);
+      if (headers.length === 0 || headers.every(h => !h)) return false;
+      const values = headers.map(h => row[h] || '').join(',');
+      setContent(`${content.trimEnd()}\n${values}`);
+      return true;
+    }
+  };
+
   const handleAddRowSubmit = () => {
     const cleanRow: Record<string, string> = {};
     for (const [k, v] of Object.entries(rowForm)) {
       if (v) cleanRow[k] = v;
     }
 
-    if (format === 'json') {
-      try {
-        const arr = JSON.parse(content);
-        if (Array.isArray(arr)) {
-          arr.push(cleanRow);
-          setContent(JSON.stringify(arr, null, 2));
-        }
-      } catch {
-        setContent(JSON.stringify([cleanRow], null, 2));
-      }
-    } else {
-      const fieldNames = fields.map(f => f.name);
-      if (!content.trim()) {
-        const header = fieldNames.join(',');
-        const values = fieldNames.map(f => cleanRow[f] || '').join(',');
-        setContent(`${header}\n${values}`);
-      } else {
-        const lines = content.trim().split('\n');
-        const headers = parseCsvLine(lines[0]);
-        const values = headers.map(h => cleanRow[h] || '').join(',');
-        setContent(`${content.trimEnd()}\n${values}`);
-      }
+    if (!content.trim() || appendRow(cleanRow)) {
+      setAddRowOpen(false);
+      setRowForm({});
+      setTab('paste');
+      return;
     }
 
+    // Content is misformatted — show warning
     setAddRowOpen(false);
-    setRowForm({});
-    setTab('paste');
+    showMisformatWarning(() => {
+      const freshContent = format === 'json'
+        ? JSON.stringify([cleanRow], null, 2)
+        : `${fields.map(f => f.name).join(',')}\n${fields.map(f => cleanRow[f.name] || '').join(',')}`;
+      setContent(freshContent);
+      setRowForm({});
+      setTab('paste');
+    });
   };
 
   const handleSubmit = async () => {
@@ -407,6 +452,30 @@ export function ImportPage() {
             </label>
           ))}
         </div>
+      </Modal>
+
+      {/* Misformat Warning Modal */}
+      <Modal
+        open={misformatOpen}
+        onClose={handleMisformatDismiss}
+        title="Misformatted Data"
+        actions={
+          <>
+            <button class={styles.cancelBtn} onClick={handleMisformatDismiss}>
+              Dismiss
+            </button>
+            <button class={styles.resetBtn} onClick={handleMisformatReset}>
+              Reset
+            </button>
+          </>
+        }
+      >
+        <p class={styles.misformatText}>
+          The current input data is misformatted and cannot be parsed as valid {format.toUpperCase()}.
+        </p>
+        <p class={styles.misformatHint}>
+          You can <strong>dismiss</strong> to keep editing, or <strong>reset</strong> to clear the content and proceed.
+        </p>
       </Modal>
     </div>
   );

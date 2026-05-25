@@ -10,16 +10,40 @@ export interface ApiError {
   message: string;
 }
 
+function getStore(): Storage {
+  return localStorage.getItem('am_remember') ? localStorage : sessionStorage;
+}
+
 export function getCredentials() {
-  const securityKey = sessionStorage.getItem('am_security_key');
-  const operatorKey = sessionStorage.getItem('am_operator_key');
+  const store = getStore();
+  const securityKey = store.getItem('am_security_key');
+  const operatorKey = store.getItem('am_operator_key');
   if (!securityKey || !operatorKey) return null;
   return { securityKey, operatorKey };
 }
 
+export function saveCredentials(securityKey: string, operatorKey: string, remember: boolean): void {
+  // Clear both storages first to avoid stale keys
+  for (const s of [localStorage, sessionStorage]) {
+    s.removeItem('am_security_key');
+    s.removeItem('am_operator_key');
+  }
+  if (remember) {
+    localStorage.setItem('am_remember', '1');
+  } else {
+    localStorage.removeItem('am_remember');
+  }
+  const store = remember ? localStorage : sessionStorage;
+  store.setItem('am_security_key', securityKey);
+  store.setItem('am_operator_key', operatorKey);
+}
+
 export function clearCredentials(): void {
-  sessionStorage.removeItem('am_security_key');
-  sessionStorage.removeItem('am_operator_key');
+  localStorage.removeItem('am_remember');
+  for (const s of [localStorage, sessionStorage]) {
+    s.removeItem('am_security_key');
+    s.removeItem('am_operator_key');
+  }
 }
 
 let onAuthError: (() => void) | null = null;

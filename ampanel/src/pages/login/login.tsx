@@ -11,6 +11,7 @@ export function LoginPage() {
 
   const [securityKey, setSecurityKey] = useState('');
   const [operatorKey, setOperatorKey] = useState('');
+  const [remember, setRemember] = useState(() => !!localStorage.getItem('am_remember'));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,7 +21,7 @@ export function LoginPage() {
     setError(null);
 
     try {
-      await login(securityKey, operatorKey);
+      await login(securityKey, operatorKey, remember);
       route('/tokens');
     } catch (err) {
       setError((err as ApiError).message || 'Connection failed');
@@ -61,6 +62,16 @@ export function LoginPage() {
             onInput={(e) => setOperatorKey((e.target as HTMLInputElement).value)}
             required
           />
+        </label>
+
+        <label class={styles.remember}>
+          <input
+            type="checkbox"
+            class={styles.checkbox}
+            checked={remember}
+            onChange={(e) => setRemember((e.target as HTMLInputElement).checked)}
+          />
+          <span>Remember me</span>
         </label>
 
         <button type="submit" class={styles.button} disabled={loading}>

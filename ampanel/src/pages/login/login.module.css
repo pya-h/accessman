@@ -131,6 +131,23 @@
   background: var(--color-bg-card);
 }
 
+.remember {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
 .button {
   margin-top: var(--space-3);
   padding: 12px var(--space-4);

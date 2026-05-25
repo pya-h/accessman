@@ -358,6 +358,41 @@
   font-style: italic;
 }
 
+/* Reset button (destructive) */
+.resetBtn {
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  border-radius: var(--border-radius);
+  background: var(--color-status-revoked);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background var(--transition-normal),
+    box-shadow var(--transition-normal),
+    transform var(--transition-fast);
+}
+
+.resetBtn:hover {
+  background: var(--color-status-revoked-hover);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-status-revoked) 25%, transparent);
+}
+
+/* Misformat modal text */
+.misformatText {
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.misformatHint {
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  margin-top: var(--space-2);
+}
+
 @media (max-width: 768px) {
   .tabRow {
     flex-direction: column;
