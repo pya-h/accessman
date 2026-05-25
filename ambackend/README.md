@@ -1,99 +1,178 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# AccessMan Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Centralized access token management service. Issues, verifies, and manages opaque access tokens across multiple applications.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Tech Stack
 
-## Description
+- **Runtime**: Node.js >= 20
+- **Framework**: NestJS 11 + Fastify 5
+- **Database**: PostgreSQL + TypeORM (migrations only, no synchronize)
+- **Language**: TypeScript
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+## Quick Start
 
 ```bash
-$ npm install
+# Install dependencies
+npm install
+
+# Copy and configure environment
+cp .env.example .env
+# Edit .env with your database URL and security keys
+
+# Create database
+createdb accessman
+
+# Run migrations
+npm run migration:run
+
+# Start development server
+npm run start:dev
 ```
 
-## Compile and run the project
+The server starts at `http://localhost:3000` with all routes under `/api`.
+
+## Environment Variables
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `DATABASE_URL` | yes | `postgresql://postgres:postgres@localhost:5432/accessman` | PostgreSQL connection string |
+| `SECURITY_KEY` | yes | - | Shared security key for all API requests |
+| `OPERATOR_KEY` | yes | - | Additional key for operator-level access |
+| `PORT` | no | `3000` | Server port |
+| `ADMIN_APP_NAME` | no | `am-panel` | App name for admin/operator access |
+| `DEFAULT_TOKEN_EXPIRY_DAYS` | no | `365` | Default token TTL in days |
+| `DATABASE_TEST_URL` | no | - | PostgreSQL connection for E2E tests |
+
+## Security Model
+
+All API requests require two headers: `X-Security` (shared key) and `X-App-Name` (registered app name).
+
+- **Tier 1** (consuming apps): `X-Security` + `X-App-Name` -- verify tokens, update metadata
+- **Tier 2** (operators): `X-Security` + `X-App-Name` (admin) + `X-Operator-Key` -- import, revoke, list, manage apps
+
+## API Endpoints
+
+### Tier 1 -- App-Level
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/tokens/verify` | Verify a token and get metadata |
+| `PATCH` | `/api/tokens/metadata` | Update a token's metadata (full replace) |
+
+### Tier 2 -- Operator-Level
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/import` | Bulk import tokens (JSON or CSV) |
+| `POST` | `/api/import/:appName` | Per-app import (appName from URL) |
+| `POST` | `/api/import/reissue` | Re-issue tokens (revoke old + issue new) |
+| `GET` | `/api/tokens` | List tokens with filters and pagination |
+| `GET` | `/api/tokens/:id` | Get single token detail |
+| `POST` | `/api/tokens/:id/revoke` | Revoke a token |
+| `GET` | `/api/apps` | List all registered apps |
+| `POST` | `/api/apps` | Register a new app |
+
+### Custom Token Import
+
+All import endpoints support an optional `token` field per item, allowing operators to provide their own token strings instead of having the service auto-generate them. Custom tokens must follow the format `{appName}_{CODE}` where CODE is 8-64 characters.
+
+## Token Format
+
+```
+{appName}_{64_hex_chars}
+```
+
+Tokens are stored as SHA-256 hashes. The raw token is returned only once at creation time. Each token is scoped to one user + one app, with one active token allowed per pair.
+
+## Scripts
 
 ```bash
-# development
-$ npm run start
+npm run start:dev          # Development with watch mode
+npm run build              # Compile to dist/
+npm run start:prod         # Run compiled output
 
-# watch mode
-$ npm run start:dev
+npm run test               # Unit tests
+npm run test:e2e           # E2E tests (requires DATABASE_TEST_URL)
+npm run test:cov           # Coverage report
 
-# production mode
-$ npm run start:prod
+npm run migration:run      # Run pending migrations
+npm run migration:revert   # Revert last migration
+npm run migration:generate # Auto-generate migration from entity changes
+npm run migration:show     # Show migration status
+
+npm run lint               # Lint and auto-fix
+npm run format             # Format with Prettier
 ```
 
-## Run tests
+## Project Structure
+
+```
+src/
+  main.ts                    # Fastify bootstrap, global pipes, CSV parser
+  app.module.ts              # Root module
+  typeorm.config.ts          # DataSource for CLI and NestJS
+
+  config/
+    security.config.ts       # Security keys and admin app name
+    token.config.ts          # Default expiry days
+
+  common/
+    guards/
+      app-security.guard.ts  # Tier 1: validates X-Security + X-App-Name
+      operator.guard.ts      # Tier 2: validates X-Operator-Key + admin app
+    decorators/
+      app-name.decorator.ts  # @RequestApp() parameter decorator
+
+  apps/
+    app.entity.ts
+    apps.service.ts
+    apps.controller.ts
+    apps.module.ts
+    dto/create-app.dto.ts
+
+  tokens/
+    token.entity.ts
+    token.utils.ts           # generateToken, hashToken, extractAppName,
+                             # validateCustomToken, processCustomToken
+    tokens.service.ts
+    tokens.controller.ts
+    tokens.module.ts
+    dto/
+      verify-token.dto.ts
+      update-metadata.dto.ts
+      list-tokens-query.dto.ts
+
+  import/
+    import.service.ts        # importTokens, reIssueTokens, resolveItems, parseCsv
+    import.controller.ts
+    import.module.ts
+    dto/
+      import-item.dto.ts
+      import-item-per-app.dto.ts
+
+  migrations/
+    <timestamp>-Init.ts      # Schema + admin app seed
+```
+
+## Testing
+
+Unit tests mock the database layer and cover all service methods. E2E tests spin up a real NestJS app with a test database and test all endpoints including security guards.
 
 ```bash
-# unit tests
-$ npm run test
+# Run all unit tests
+npm run test
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+# Run E2E tests (requires a test database)
+npm run test:e2e
 ```
 
-## Deployment
+## Docker
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+The service can be built and run via the Dockerfile in the project root:
 
 ```bash
-$ npm install -g mau
-$ mau deploy
+docker build -f ../Dockerfile -t accessman ..
+docker run -p 3000:3000 --env-file .env accessman
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+The container runs migrations automatically on startup before starting the server.
