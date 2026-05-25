@@ -19,7 +19,6 @@ export class TokensService {
   async verify(
     rawToken: string,
     requestingAppName: string,
-    userId: string,
   ): Promise<
     | {
         valid: true;
@@ -42,10 +41,6 @@ export class TokensService {
     });
 
     if (!token) {
-      return { valid: false, reason: 'not_found' };
-    }
-
-    if (token.userId !== userId) {
       return { valid: false, reason: 'not_found' };
     }
 

@@ -22,13 +22,12 @@ export class ImportService {
       expiresAt?: string;
       token?: string;
     }[],
-    defaultExpiryDays: number,
   ): Promise<{
     imported: {
       userId: string;
       appName: string;
       token: string;
-      expiresAt: Date;
+      expiresAt: Date | null;
     }[];
     errors: { userId: string; appName: string; reason: string }[];
   }> {
@@ -37,7 +36,7 @@ export class ImportService {
         userId: string;
         appName: string;
         token: string;
-        expiresAt: Date;
+        expiresAt: Date | null;
       }[] = [];
       const errors: {
         userId: string;
@@ -78,10 +77,7 @@ export class ImportService {
         let raw: string, hash: string, prefix: string;
 
         if (item.token) {
-          const validationError = validateCustomToken(
-            item.token,
-            item.appName,
-          );
+          const validationError = validateCustomToken(item.token, item.appName);
           if (validationError) {
             errors.push({
               userId: item.userId,
@@ -112,13 +108,7 @@ export class ImportService {
           ({ raw, hash, prefix } = generateToken(item.appName));
         }
 
-        let expiresAt: Date;
-        if (item.expiresAt) {
-          expiresAt = new Date(item.expiresAt);
-        } else {
-          expiresAt = new Date();
-          expiresAt.setDate(expiresAt.getDate() + defaultExpiryDays);
-        }
+        const expiresAt = item.expiresAt ? new Date(item.expiresAt) : null;
 
         const token = manager.create(TokenEntity, {
           userId: item.userId,
@@ -149,13 +139,12 @@ export class ImportService {
       expiresAt?: string;
       token?: string;
     }[],
-    defaultExpiryDays: number,
   ): Promise<{
     imported: {
       userId: string;
       appName: string;
       token: string;
-      expiresAt: Date;
+      expiresAt: Date | null;
     }[];
     errors: { userId: string; appName: string; reason: string }[];
   }> {
@@ -164,7 +153,7 @@ export class ImportService {
         userId: string;
         appName: string;
         token: string;
-        expiresAt: Date;
+        expiresAt: Date | null;
       }[] = [];
       const errors: {
         userId: string;
@@ -194,10 +183,7 @@ export class ImportService {
         let raw: string, hash: string, prefix: string;
 
         if (item.token) {
-          const validationError = validateCustomToken(
-            item.token,
-            item.appName,
-          );
+          const validationError = validateCustomToken(item.token, item.appName);
           if (validationError) {
             errors.push({
               userId: item.userId,
@@ -233,13 +219,7 @@ export class ImportService {
           await manager.save(existing);
         }
 
-        let expiresAt: Date;
-        if (item.expiresAt) {
-          expiresAt = new Date(item.expiresAt);
-        } else {
-          expiresAt = new Date();
-          expiresAt.setDate(expiresAt.getDate() + defaultExpiryDays);
-        }
+        const expiresAt = item.expiresAt ? new Date(item.expiresAt) : null;
 
         const token = manager.create(TokenEntity, {
           userId: item.userId,

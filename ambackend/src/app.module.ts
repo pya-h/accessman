@@ -8,13 +8,12 @@ import { AppsModule } from './apps/apps.module';
 import { TokensModule } from './tokens/tokens.module';
 import { ImportModule } from './import/import.module';
 import securityConfig from './config/security.config';
-import tokenConfig from './config/token.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [securityConfig, tokenConfig],
+      load: [securityConfig],
     }),
     TypeOrmModule.forRoot(typeormConfig),
     ServeStaticModule.forRoot({

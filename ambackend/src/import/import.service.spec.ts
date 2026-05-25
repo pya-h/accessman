@@ -47,7 +47,6 @@ describe('ImportService', () => {
 
       const result = await service.importTokens(
         [{ userId: 'user1', appName: 'myapp' }],
-        365,
       );
 
       expect(result.imported).toHaveLength(1);
@@ -55,7 +54,7 @@ describe('ImportService', () => {
       expect(result.imported[0].userId).toBe('user1');
       expect(result.imported[0].appName).toBe('myapp');
       expect(result.imported[0].token).toMatch(/^myapp_[0-9a-f]{64}$/);
-      expect(result.imported[0].expiresAt).toBeInstanceOf(Date);
+      expect(result.imported[0].expiresAt).toBeNull();
     });
 
     it('imports batch successfully', async () => {
@@ -70,7 +69,6 @@ describe('ImportService', () => {
           { userId: 'user1', appName: 'app1' },
           { userId: 'user2', appName: 'app2' },
         ],
-        365,
       );
 
       expect(result.imported).toHaveLength(2);
@@ -84,7 +82,6 @@ describe('ImportService', () => {
 
       const result = await service.importTokens(
         [{ userId: 'user1', appName: 'myapp' }],
-        365,
       );
 
       expect(result.imported).toHaveLength(0);
@@ -99,7 +96,6 @@ describe('ImportService', () => {
 
       const result = await service.importTokens(
         [{ userId: 'user1', appName: 'myapp' }],
-        365,
       );
 
       expect(result.imported).toHaveLength(1);
@@ -113,7 +109,6 @@ describe('ImportService', () => {
 
       const result = await service.importTokens(
         [{ userId: 'user1', appName: 'newapp' }],
-        365,
       );
 
       expect(result.imported).toHaveLength(1);
@@ -130,7 +125,6 @@ describe('ImportService', () => {
       const customDate = '2030-12-31T00:00:00.000Z';
       const result = await service.importTokens(
         [{ userId: 'user1', appName: 'myapp', expiresAt: customDate }],
-        365,
       );
 
       expect(result.imported[0].expiresAt).toEqual(new Date(customDate));
@@ -143,7 +137,7 @@ describe('ImportService', () => {
         .mockResolvedValueOnce({ id: 1, name: 'myapp' })
         .mockResolvedValueOnce(null);
 
-      await service.importTokens([{ userId: 'user1', appName: 'myapp' }], 365);
+      await service.importTokens([{ userId: 'user1', appName: 'myapp' }]);
 
       const tokenFindCall = mockManager.findOne.mock.calls[1];
       expect(tokenFindCall[0]).toBe(TokenEntity);
@@ -162,7 +156,6 @@ describe('ImportService', () => {
 
       const first = await service.importTokens(
         [{ userId: 'user1', appName: 'myapp' }],
-        365,
       );
       expect(first.imported).toHaveLength(1);
 
@@ -173,7 +166,6 @@ describe('ImportService', () => {
 
       const second = await service.importTokens(
         [{ userId: 'user1', appName: 'myapp' }],
-        365,
       );
 
       expect(second.imported).toHaveLength(0);
@@ -188,7 +180,6 @@ describe('ImportService', () => {
 
       const result = await service.importTokens(
         [{ userId: 'user1', appName: 'myapp' }],
-        365,
       );
 
       expect(result.imported).toHaveLength(1);
@@ -210,7 +201,6 @@ describe('ImportService', () => {
 
       const result = await service.reIssueTokens(
         [{ userId: 'user1', appName: 'myapp' }],
-        365,
       );
 
       expect(result.imported).toHaveLength(1);
@@ -229,7 +219,6 @@ describe('ImportService', () => {
 
       const result = await service.reIssueTokens(
         [{ userId: 'user1', appName: 'myapp' }],
-        365,
       );
 
       expect(result.imported).toHaveLength(1);
@@ -254,7 +243,6 @@ describe('ImportService', () => {
           { userId: 'user1', appName: 'myapp' },
           { userId: 'user2', appName: 'myapp' },
         ],
-        365,
       );
 
       expect(result.imported).toHaveLength(2);
@@ -270,7 +258,7 @@ describe('ImportService', () => {
         .mockResolvedValueOnce({ id: 1, name: 'myapp' })
         .mockResolvedValueOnce(null);
 
-      await service.reIssueTokens([{ userId: 'user1', appName: 'myapp' }], 365);
+      await service.reIssueTokens([{ userId: 'user1', appName: 'myapp' }]);
 
       const tokenFindCall = mockManager.findOne.mock.calls[1];
       expect(tokenFindCall[0]).toBe(TokenEntity);
@@ -291,7 +279,7 @@ describe('ImportService', () => {
         .mockResolvedValueOnce({ id: 1, name: 'myapp' })
         .mockResolvedValueOnce(existingToken);
 
-      await service.reIssueTokens([{ userId: 'user1', appName: 'myapp' }], 365);
+      await service.reIssueTokens([{ userId: 'user1', appName: 'myapp' }]);
 
       // First save: revoke existing
       const firstSave = mockManager.save.mock.calls[0][0];
@@ -312,7 +300,6 @@ describe('ImportService', () => {
 
       const first = await service.reIssueTokens(
         [{ userId: 'user1', appName: 'myapp' }],
-        365,
       );
       expect(first.imported).toHaveLength(1);
 
@@ -325,7 +312,6 @@ describe('ImportService', () => {
 
       const second = await service.reIssueTokens(
         [{ userId: 'user1', appName: 'myapp' }],
-        365,
       );
       expect(second.imported).toHaveLength(1);
 
@@ -345,7 +331,6 @@ describe('ImportService', () => {
 
       const importResult = await service.importTokens(
         [{ userId: 'user1', appName: 'myapp' }],
-        365,
       );
       expect(importResult.errors).toHaveLength(1);
       expect(importResult.imported).toHaveLength(0);
@@ -358,7 +343,6 @@ describe('ImportService', () => {
 
       const reissueResult = await service.reIssueTokens(
         [{ userId: 'user1', appName: 'myapp' }],
-        365,
       );
       expect(reissueResult.imported).toHaveLength(1);
       expect(active.revokedAt).toBeInstanceOf(Date); // Old one revoked
@@ -375,7 +359,6 @@ describe('ImportService', () => {
       const customToken = 'myapp_ABCDEF12345678';
       const result = await service.importTokens(
         [{ userId: 'user1', appName: 'myapp', token: customToken }],
-        365,
       );
 
       expect(result.imported).toHaveLength(1);
@@ -395,7 +378,6 @@ describe('ImportService', () => {
 
       const result = await service.importTokens(
         [{ userId: 'user1', appName: 'myapp', token: 'otherapp_ABCDEF1234' }],
-        365,
       );
 
       expect(result.imported).toHaveLength(0);
@@ -410,7 +392,6 @@ describe('ImportService', () => {
 
       const result = await service.importTokens(
         [{ userId: 'user1', appName: 'myapp', token: 'myapp_short' }],
-        365,
       );
 
       expect(result.imported).toHaveLength(0);
@@ -426,7 +407,6 @@ describe('ImportService', () => {
       const longCode = 'a'.repeat(65);
       const result = await service.importTokens(
         [{ userId: 'user1', appName: 'myapp', token: `myapp_${longCode}` }],
-        365,
       );
 
       expect(result.imported).toHaveLength(0);
@@ -441,7 +421,6 @@ describe('ImportService', () => {
 
       const result = await service.importTokens(
         [{ userId: 'user1', appName: 'myapp', token: 'nounderscore' }],
-        365,
       );
 
       expect(result.imported).toHaveLength(0);
@@ -457,7 +436,6 @@ describe('ImportService', () => {
 
       const result = await service.importTokens(
         [{ userId: 'user1', appName: 'myapp', token: 'myapp_DUPLICATE1234' }],
-        365,
       );
 
       expect(result.imported).toHaveLength(0);
@@ -478,7 +456,6 @@ describe('ImportService', () => {
           { userId: 'user1', appName: 'myapp', token: customToken },
           { userId: 'user2', appName: 'myapp' },
         ],
-        365,
       );
 
       expect(result.imported).toHaveLength(2);
@@ -504,7 +481,6 @@ describe('ImportService', () => {
       const customToken = 'myapp_REISSUEMANUAL1';
       const result = await service.reIssueTokens(
         [{ userId: 'user1', appName: 'myapp', token: customToken }],
-        365,
       );
 
       expect(result.imported).toHaveLength(1);
@@ -526,7 +502,6 @@ describe('ImportService', () => {
 
       const result = await service.reIssueTokens(
         [{ userId: 'user1', appName: 'myapp', token: 'myapp_short' }],
-        365,
       );
 
       expect(result.errors).toHaveLength(1);
@@ -607,7 +582,6 @@ describe('ImportService', () => {
 
       const importResult = await service.importTokens(
         [{ userId: randUser, appName: randApp, expiresAt }],
-        365,
       );
 
       expect(importResult.imported).toHaveLength(1);
@@ -625,7 +599,6 @@ describe('ImportService', () => {
 
       const reissueResult = await service.reIssueTokens(
         [{ userId: randUser, appName: randApp }],
-        365,
       );
 
       expect(reissueResult.imported).toHaveLength(1);

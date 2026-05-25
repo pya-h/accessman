@@ -10,8 +10,7 @@ X-Security: {{$dotenv SECURITY_KEY}}
 X-App-Name: myapp
 
 {
-  "token": "myapp_PASTE_RAW_TOKEN_HERE",
-  "userId": "user-001"
+  "token": "myapp_PASTE_RAW_TOKEN_HERE"
 }
 
 ### Update token metadata

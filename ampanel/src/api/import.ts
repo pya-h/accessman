@@ -1,7 +1,7 @@
 import { request } from './client';
 
 export interface ImportResponse {
-  imported: { userId: string; appName: string; token: string; expiresAt: string }[];
+  imported: { userId: string; appName: string; token: string; expiresAt: string | null }[];
   errors: { userId: string; appName: string; reason: string }[];
 }
 

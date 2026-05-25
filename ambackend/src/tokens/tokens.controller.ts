@@ -27,7 +27,7 @@ export class TokensController {
   @Post('verify')
   @HttpCode(200)
   async verify(@Body() dto: VerifyTokenDto, @RequestApp() app: AppEntity) {
-    return this.tokensService.verify(dto.token, app.name, dto.userId);
+    return this.tokensService.verify(dto.token, app.name);
   }
 
   @UseGuards(AppSecurityGuard)

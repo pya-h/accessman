@@ -27,7 +27,6 @@ import { ImportModule } from '../src/import/import.module';
 import { AppEntity } from '../src/apps/app.entity';
 import { TokenEntity } from '../src/tokens/token.entity';
 import securityConfig from '../src/config/security.config';
-import tokenConfig from '../src/config/token.config';
 
 const SECURITY_KEY = 'test-security-key-e2e-12345';
 const OPERATOR_KEY = 'test-operator-key-e2e-12345';
@@ -79,13 +78,13 @@ describe('AccessMan E2E', () => {
     process.env.SECURITY_KEY = SECURITY_KEY;
     process.env.OPERATOR_KEY = OPERATOR_KEY;
     process.env.ADMIN_APP_NAME = ADMIN_APP;
-    process.env.DEFAULT_TOKEN_EXPIRY_DAYS = '365';
+
 
     const moduleFixture = await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({
           isGlobal: true,
-          load: [securityConfig, tokenConfig],
+          load: [securityConfig],
         }),
         TypeOrmModule.forRoot({
           type: 'postgres',
@@ -145,7 +144,7 @@ describe('AccessMan E2E', () => {
         method: 'POST',
         url: '/api/tokens/verify',
         headers: { 'x-app-name': ADMIN_APP },
-        payload: { token: 'x', userId: 'x' },
+        payload: { token: 'x' },
       });
       expect(res.statusCode).toBe(401);
     });
@@ -155,7 +154,7 @@ describe('AccessMan E2E', () => {
         method: 'POST',
         url: '/api/tokens/verify',
         headers: { 'x-security': 'wrong-key', 'x-app-name': ADMIN_APP },
-        payload: { token: 'x', userId: 'x' },
+        payload: { token: 'x' },
       });
       expect(res.statusCode).toBe(401);
     });
@@ -168,7 +167,7 @@ describe('AccessMan E2E', () => {
           'x-security': SECURITY_KEY,
           'x-app-name': 'nonexistent-app',
         },
-        payload: { token: 'x', userId: 'x' },
+        payload: { token: 'x' },
       });
       expect(res.statusCode).toBe(403);
     });
@@ -185,7 +184,7 @@ describe('AccessMan E2E', () => {
           'x-security': SECURITY_KEY,
           'x-app-name': 'inactive-app',
         },
-        payload: { token: 'x', userId: 'x' },
+        payload: { token: 'x' },
       });
       expect(res.statusCode).toBe(403);
     });
@@ -462,12 +461,12 @@ describe('AccessMan E2E', () => {
       rawToken = await importToken('user1', testApp);
     });
 
-    it('valid token + userId → 200 with token details', async () => {
+    it('valid token → 200 with token details', async () => {
       const res = await app.inject({
         method: 'POST',
         url: '/api/tokens/verify',
         headers: tier1Headers(testApp),
-        payload: { token: rawToken, userId: 'user1' },
+        payload: { token: rawToken },
       });
 
       expect(res.statusCode).toBe(200);
@@ -477,19 +476,6 @@ describe('AccessMan E2E', () => {
       expect(body.appName).toBe(testApp);
       expect(body.metadata).toEqual({});
       expect(body.expiresAt).toBeDefined();
-    });
-
-    it('wrong userId → valid: false', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/api/tokens/verify',
-        headers: tier1Headers(testApp),
-        payload: { token: rawToken, userId: 'wrong-user' },
-      });
-
-      const body = JSON.parse(res.payload);
-      expect(body.valid).toBe(false);
-      expect(body.reason).toBe('not_found');
     });
 
     it('expired token → valid: false, reason: expired', async () => {
@@ -505,7 +491,7 @@ describe('AccessMan E2E', () => {
         method: 'POST',
         url: '/api/tokens/verify',
         headers: tier1Headers(testApp),
-        payload: { token: expToken, userId: 'expuser' },
+        payload: { token: expToken },
       });
 
       const body = JSON.parse(res.payload);
@@ -525,7 +511,7 @@ describe('AccessMan E2E', () => {
         method: 'POST',
         url: '/api/tokens/verify',
         headers: tier1Headers(testApp),
-        payload: { token: revToken, userId: 'revuser' },
+        payload: { token: revToken },
       });
 
       const body = JSON.parse(res.payload);
@@ -540,7 +526,6 @@ describe('AccessMan E2E', () => {
         headers: tier1Headers(testApp),
         payload: {
           token: `${testApp}_${'a'.repeat(64)}`,
-          userId: 'user1',
         },
       });
 
@@ -554,7 +539,7 @@ describe('AccessMan E2E', () => {
         method: 'POST',
         url: '/api/tokens/verify',
         headers: tier1Headers(testApp),
-        payload: { token: 'x' }, // missing userId
+        payload: {}, // missing token
       });
 
       expect(res.statusCode).toBe(400);
@@ -564,7 +549,7 @@ describe('AccessMan E2E', () => {
       const res = await app.inject({
         method: 'POST',
         url: '/api/tokens/verify',
-        payload: { token: rawToken, userId: 'user1' },
+        payload: { token: rawToken },
       });
 
       expect(res.statusCode).toBe(401);
@@ -602,7 +587,7 @@ describe('AccessMan E2E', () => {
         method: 'POST',
         url: '/api/tokens/verify',
         headers: tier1Headers(testApp),
-        payload: { token: rawToken, userId: 'user1' },
+        payload: { token: rawToken },
       });
 
       const body = JSON.parse(res.payload);
@@ -944,7 +929,7 @@ describe('AccessMan E2E', () => {
         method: 'POST',
         url: '/api/tokens/verify',
         headers: tier1Headers('revokeapp'),
-        payload: { token: rawToken, userId: 'user1' },
+        payload: { token: rawToken },
       });
       const verifyBody = JSON.parse(verifyRes.payload);
       expect(verifyBody.valid).toBe(false);
@@ -1017,7 +1002,7 @@ describe('AccessMan E2E', () => {
         method: 'POST',
         url: '/api/tokens/verify',
         headers: tier1Headers('mtapp'),
-        payload: { token: customToken, userId: 'user1' },
+        payload: { token: customToken },
       });
       const verifyBody = JSON.parse(verifyRes.payload);
       expect(verifyBody.valid).toBe(true);
@@ -1044,7 +1029,7 @@ describe('AccessMan E2E', () => {
         method: 'POST',
         url: '/api/tokens/verify',
         headers: tier1Headers('csvmt'),
-        payload: { token: customToken, userId: 'user1' },
+        payload: { token: customToken },
       });
       expect(JSON.parse(verifyRes.payload).valid).toBe(true);
     });
@@ -1098,7 +1083,7 @@ describe('AccessMan E2E', () => {
         method: 'POST',
         url: '/api/tokens/verify',
         headers: tier1Headers('reimt'),
-        payload: { token: oldToken, userId: 'user1' },
+        payload: { token: oldToken },
       });
       expect(JSON.parse(oldRes.payload).valid).toBe(false);
 
@@ -1107,7 +1092,7 @@ describe('AccessMan E2E', () => {
         method: 'POST',
         url: '/api/tokens/verify',
         headers: tier1Headers('reimt'),
-        payload: { token: customToken, userId: 'user1' },
+        payload: { token: customToken },
       });
       expect(JSON.parse(newRes.payload).valid).toBe(true);
     });
@@ -1217,7 +1202,7 @@ describe('AccessMan E2E', () => {
         method: 'POST',
         url: '/api/tokens/verify',
         headers: tier1Headers(randApp),
-        payload: { token: rawToken, userId: randUser },
+        payload: { token: rawToken },
       });
       const verifyBody = JSON.parse(verifyRes.payload);
       expect(verifyBody.valid).toBe(true);
@@ -1238,7 +1223,7 @@ describe('AccessMan E2E', () => {
         method: 'POST',
         url: '/api/tokens/verify',
         headers: tier1Headers(randApp),
-        payload: { token: rawToken, userId: randUser },
+        payload: { token: rawToken },
       });
       expect(JSON.parse(verifyMeta.payload).metadata).toEqual(randMeta);
 
@@ -1258,7 +1243,7 @@ describe('AccessMan E2E', () => {
         method: 'POST',
         url: '/api/tokens/verify',
         headers: tier1Headers(randApp),
-        payload: { token: rawToken, userId: randUser },
+        payload: { token: rawToken },
       });
       expect(JSON.parse(oldRes.payload).reason).toBe('revoked');
 
@@ -1267,7 +1252,7 @@ describe('AccessMan E2E', () => {
         method: 'POST',
         url: '/api/tokens/verify',
         headers: tier1Headers(randApp),
-        payload: { token: newToken, userId: randUser },
+        payload: { token: newToken },
       });
       expect(JSON.parse(newRes.payload).valid).toBe(true);
     });
@@ -1301,7 +1286,7 @@ describe('AccessMan E2E', () => {
         method: 'POST',
         url: '/api/tokens/verify',
         headers: tier1Headers('pastapp'),
-        payload: { token: rawToken, userId: 'pastuser' },
+        payload: { token: rawToken },
       });
       const verifyBody = JSON.parse(verifyRes.payload);
       expect(verifyBody.valid).toBe(false);
@@ -1356,7 +1341,7 @@ describe('AccessMan E2E', () => {
         method: 'POST',
         url: '/api/tokens/verify',
         headers: tier1Headers('otherapp'),
-        payload: { token: rawToken, userId: 'user1' },
+        payload: { token: rawToken },
       });
 
       const body = JSON.parse(res.payload);
@@ -1364,7 +1349,7 @@ describe('AccessMan E2E', () => {
       expect(body.reason).toBe('not_found');
     });
 
-    it('import without expiresAt → default expiry applied', async () => {
+    it('import without expiresAt → no expiry (null)', async () => {
       const res = await app.inject({
         method: 'POST',
         url: '/api/import',
@@ -1373,13 +1358,7 @@ describe('AccessMan E2E', () => {
       });
 
       const body = JSON.parse(res.payload);
-      const expiresAt = new Date(body.imported[0].expiresAt);
-      const now = new Date();
-
-      // DEFAULT_TOKEN_EXPIRY_DAYS is set to 365 in beforeAll
-      const diffDays = (expiresAt.getTime() - now.getTime()) / (1000 * 86400);
-      expect(diffDays).toBeGreaterThan(363);
-      expect(diffDays).toBeLessThan(366);
+      expect(body.imported[0].expiresAt).toBeNull();
     });
 
     it('token_prefix is visible in GET /tokens responses', async () => {
@@ -1530,7 +1509,7 @@ describe('AccessMan E2E', () => {
         method: 'POST',
         url: '/api/tokens/verify',
         headers: tier1Headers('uniapp3'),
-        payload: { token: oldToken, userId: 'user1' },
+        payload: { token: oldToken },
       });
       expect(JSON.parse(oldRes.payload).valid).toBe(false);
 
@@ -1539,7 +1518,7 @@ describe('AccessMan E2E', () => {
         method: 'POST',
         url: '/api/tokens/verify',
         headers: tier1Headers('uniapp3'),
-        payload: { token: newToken, userId: 'user1' },
+        payload: { token: newToken },
       });
       expect(JSON.parse(newRes.payload).valid).toBe(true);
     });
@@ -1592,7 +1571,7 @@ describe('AccessMan E2E', () => {
           method: 'POST',
           url: '/api/tokens/verify',
           headers: tier1Headers('uniapp4'),
-          payload: { token: tok, userId: 'user1' },
+          payload: { token: tok },
         });
         expect(JSON.parse(vRes.payload).valid).toBe(expected);
       }
@@ -1623,7 +1602,7 @@ describe('Static Serving Integration', () => {
     process.env.SECURITY_KEY = SECURITY_KEY;
     process.env.OPERATOR_KEY = OPERATOR_KEY;
     process.env.ADMIN_APP_NAME = ADMIN_APP;
-    process.env.DEFAULT_TOKEN_EXPIRY_DAYS = '365';
+
 
     // Create temp public directory with index.html
     tmpDir = mkdtempSync(join(tmpdir(), 'accessman-static-'));
@@ -1636,7 +1615,7 @@ describe('Static Serving Integration', () => {
       imports: [
         ConfigModule.forRoot({
           isGlobal: true,
-          load: [securityConfig, tokenConfig],
+          load: [securityConfig],
         }),
         TypeOrmModule.forRoot({
           type: 'postgres',

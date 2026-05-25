@@ -41,7 +41,7 @@ export function ImportResultsPage() {
   const handleDownloadCsv = () => {
     downloadCsv(
       ['userId', 'appName', 'token', 'expiresAt'],
-      imported.map((t) => [t.userId, t.appName, t.token, t.expiresAt]),
+      imported.map((t) => [t.userId, t.appName, t.token, t.expiresAt ?? '']),
       'imported-tokens.csv',
     );
   };

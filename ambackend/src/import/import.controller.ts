@@ -4,30 +4,19 @@ import {
   Param,
   Req,
   Body,
-  Inject,
   UseGuards,
 } from '@nestjs/common';
 import { FastifyRequest } from 'fastify';
-import { ConfigType } from '@nestjs/config';
 import { ImportService } from './import.service';
 import { ImportItemDto } from './dto/import-item.dto';
 import { ImportItemPerAppDto } from './dto/import-item-per-app.dto';
 import { AppSecurityGuard } from '../common/guards/app-security.guard';
 import { OperatorGuard } from '../common/guards/operator.guard';
-import tokenConfig from '../config/token.config';
 
 @Controller('import')
 @UseGuards(AppSecurityGuard, OperatorGuard)
 export class ImportController {
-  private readonly defaultExpiryDays: number;
-
-  constructor(
-    private readonly importService: ImportService,
-    @Inject(tokenConfig.KEY)
-    private readonly tokenConf: ConfigType<typeof tokenConfig>,
-  ) {
-    this.defaultExpiryDays = this.tokenConf.defaultExpiryDays;
-  }
+  constructor(private readonly importService: ImportService) {}
 
   @Post()
   async importTokens(@Req() request: FastifyRequest, @Body() body: any) {
@@ -37,7 +26,7 @@ export class ImportController {
       body,
       ImportItemDto,
     );
-    return this.importService.importTokens(items, this.defaultExpiryDays);
+    return this.importService.importTokens(items);
   }
 
   @Post('reissue')
@@ -48,7 +37,7 @@ export class ImportController {
       body,
       ImportItemDto,
     );
-    return this.importService.reIssueTokens(items, this.defaultExpiryDays);
+    return this.importService.reIssueTokens(items);
   }
 
   @Post(':appName')
@@ -69,6 +58,6 @@ export class ImportController {
       expiresAt: item.expiresAt,
       token: item.token,
     }));
-    return this.importService.importTokens(items, this.defaultExpiryDays);
+    return this.importService.importTokens(items);
   }
 }

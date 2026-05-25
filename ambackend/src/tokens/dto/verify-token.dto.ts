@@ -4,8 +4,4 @@ export class VerifyTokenDto {
   @IsString()
   @IsNotEmpty()
   token: string;
-
-  @IsString()
-  @IsNotEmpty()
-  userId: string;
 }

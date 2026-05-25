@@ -40,7 +40,6 @@ The server starts at `http://localhost:3000` with all routes under `/api`.
 | `OPERATOR_KEY` | yes | - | Additional key for operator-level access |
 | `PORT` | no | `3000` | Server port |
 | `ADMIN_APP_NAME` | no | `am-panel` | App name for admin/operator access |
-| `DEFAULT_TOKEN_EXPIRY_DAYS` | no | `365` | Default token TTL in days |
 | `DATABASE_TEST_URL` | no | - | PostgreSQL connection for E2E tests |
 
 ## Security Model
@@ -114,7 +113,6 @@ src/
 
   config/
     security.config.ts       # Security keys and admin app name
-    token.config.ts          # Default expiry days
 
   common/
     guards/
