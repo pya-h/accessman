@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "push": "npm run build && cp -r dist/* ../ambackend/public/"
   },
   "dependencies": {
     "preact": "^10.25.4",

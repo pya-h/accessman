@@ -15,6 +15,11 @@ export default defineConfig({
       localsConvention: 'camelCase',
     },
   },
+  server: {
+    proxy: {
+      '/api': 'http://localhost:3000',
+    },
+  },
   build: {
     outDir: 'dist',
     target: 'es2020',

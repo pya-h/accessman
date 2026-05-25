@@ -10,7 +10,7 @@ interface AuthState {
 
 interface AuthContextValue {
   auth: AuthState;
-  login: (baseUrl: string, securityKey: string, operatorKey: string) => Promise<void>;
+  login: (securityKey: string, operatorKey: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -21,8 +21,7 @@ export function AuthProvider({ children }: { children: ComponentChildren }) {
     isAuthenticated: getCredentials() !== null,
   }));
 
-  const login = useCallback(async (baseUrl: string, securityKey: string, operatorKey: string) => {
-    sessionStorage.setItem('am_base_url', baseUrl);
+  const login = useCallback(async (securityKey: string, operatorKey: string) => {
     sessionStorage.setItem('am_security_key', securityKey);
     sessionStorage.setItem('am_operator_key', operatorKey);
 

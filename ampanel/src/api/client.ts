@@ -11,15 +11,13 @@ export interface ApiError {
 }
 
 export function getCredentials() {
-  const baseUrl = sessionStorage.getItem('am_base_url');
   const securityKey = sessionStorage.getItem('am_security_key');
   const operatorKey = sessionStorage.getItem('am_operator_key');
-  if (!baseUrl || !securityKey || !operatorKey) return null;
-  return { baseUrl, securityKey, operatorKey };
+  if (!securityKey || !operatorKey) return null;
+  return { securityKey, operatorKey };
 }
 
 export function clearCredentials(): void {
-  sessionStorage.removeItem('am_base_url');
   sessionStorage.removeItem('am_security_key');
   sessionStorage.removeItem('am_operator_key');
 }
@@ -36,7 +34,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
   const { method = 'GET', body, contentType, params } = options;
 
-  let url = `${creds.baseUrl}${path}`;
+  let url = path;
   if (params) {
     const searchParams = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
@@ -68,7 +66,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
         : undefined,
     });
   } catch {
-    throw { status: 0, message: 'Network error — check your connection and backend URL' } as ApiError;
+    throw { status: 0, message: 'Network error — check your connection' } as ApiError;
   }
 
   if (response.status === 401 || response.status === 403) {

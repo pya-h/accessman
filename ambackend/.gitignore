@@ -3,6 +3,10 @@
 /node_modules
 /build
 
+# panel build output (kept via push script)
+/public/*
+!/public/index.html
+
 # Logs
 logs
 *.log
