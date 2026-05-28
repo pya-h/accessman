@@ -36,6 +36,9 @@ export class SettingsService {
   async update(partial: {
     codeLength?: number;
     prefixAppName?: boolean;
+    includeNumbers?: boolean;
+    letterCase?: 'upper' | 'lower' | 'both';
+    includeSpecial?: boolean;
   }): Promise<SettingsEntity> {
     const settings = await this.get();
     if (partial.codeLength !== undefined) {
@@ -43,6 +46,15 @@ export class SettingsService {
     }
     if (partial.prefixAppName !== undefined) {
       settings.prefixAppName = partial.prefixAppName;
+    }
+    if (partial.includeNumbers !== undefined) {
+      settings.includeNumbers = partial.includeNumbers;
+    }
+    if (partial.letterCase !== undefined) {
+      settings.letterCase = partial.letterCase;
+    }
+    if (partial.includeSpecial !== undefined) {
+      settings.includeSpecial = partial.includeSpecial;
     }
     return this.settingsRepository.save(settings);
   }

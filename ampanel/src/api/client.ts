@@ -3,6 +3,9 @@ interface RequestOptions {
   body?: unknown;
   contentType?: string;
   params?: Record<string, string | number | undefined>;
+  // Override the X-App-Name header (defaults to the admin app). Used by the
+  // verify endpoint, which must be scoped to the token's owning app.
+  appName?: string;
 }
 
 export interface ApiError {
@@ -56,7 +59,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   const creds = getCredentials();
   if (!creds) throw { status: 401, message: 'Not authenticated' } as ApiError;
 
-  const { method = 'GET', body, contentType, params } = options;
+  const { method = 'GET', body, contentType, params, appName } = options;
 
   let url = path;
   if (params) {
@@ -72,7 +75,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
   const headers: Record<string, string> = {
     'X-Security': creds.securityKey,
-    'X-App-Name': import.meta.env.VITE_ADMIN_APP_NAME || 'am-panel',
+    'X-App-Name': appName || import.meta.env.VITE_ADMIN_APP_NAME || 'am-panel',
     'X-Operator-Key': creds.operatorKey,
   };
 

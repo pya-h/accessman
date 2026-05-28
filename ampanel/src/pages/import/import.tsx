@@ -224,6 +224,11 @@ export function ImportPage() {
 
   const appendRow = (row: Record<string, string>) => {
     if (format === 'json') {
+      // Empty box → start a fresh array with this row
+      if (!content.trim()) {
+        setContent(JSON.stringify([row], null, 2));
+        return true;
+      }
       try {
         const arr = JSON.parse(content);
         if (Array.isArray(arr)) {
@@ -259,7 +264,7 @@ export function ImportPage() {
       if (v) cleanRow[k] = v;
     }
 
-    if (!content.trim() || appendRow(cleanRow)) {
+    if (appendRow(cleanRow)) {
       setAddRowOpen(false);
       setRowForm({});
       setTab('paste');

@@ -57,6 +57,7 @@ src/
     tokens/                      # Token list + detail pages
     apps/                        # App list + register
     import/                      # Import form + results display
+    verify/                      # Verify a token against its app (shows result + metadata)
     settings/                    # Preferences: theme/font/density + token generation (code length, prefix)
 
   components/

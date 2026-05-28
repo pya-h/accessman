@@ -23,6 +23,9 @@ async function main() {
   await ds.initialize();
   await ds.query('DELETE FROM "tokens"');
   await ds.query('DELETE FROM "apps"');
+  // Reset token-generation settings to defaults (SettingsService recreates the
+  // singleton row on first access) so each run starts from a known baseline.
+  await ds.query('DELETE FROM "settings"');
   await ds.query(
     `INSERT INTO "apps" ("name") VALUES ($1) ON CONFLICT DO NOTHING`,
     [ADMIN_APP],

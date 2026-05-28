@@ -1,8 +1,13 @@
 import { request } from './client';
 
+export type LetterCase = 'upper' | 'lower' | 'both';
+
 export interface ServerSettings {
   codeLength: number;
   prefixAppName: boolean;
+  includeNumbers: boolean;
+  letterCase: LetterCase;
+  includeSpecial: boolean;
 }
 
 export function getServerSettings(): Promise<ServerSettings> {

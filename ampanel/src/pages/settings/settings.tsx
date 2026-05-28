@@ -2,6 +2,7 @@ import { useState, useEffect } from 'preact/hooks';
 import { getSettings, setSettings, applySettings, ACCENT_PRESETS } from '@/lib/settings';
 import type { Settings } from '@/lib/settings';
 import { getServerSettings, updateServerSettings } from '@/api/settings';
+import type { LetterCase, ServerSettings } from '@/api/settings';
 import { useQuery } from '@/lib/use-query';
 import { showToast } from '@/components/toast';
 import { IconSun, IconMoon, IconMonitor, IconPalette } from '@/components/icons';
@@ -21,38 +22,49 @@ export function SettingsPage() {
   const { data: serverSettings } = useQuery(() => getServerSettings(), []);
   const [codeLength, setCodeLength] = useState(4);
   const [prefixAppName, setPrefixAppName] = useState(false);
+  const [includeNumbers, setIncludeNumbers] = useState(true);
+  const [letterCase, setLetterCase] = useState<LetterCase>('lower');
+  const [includeSpecial, setIncludeSpecial] = useState(false);
+
+  const syncFromServer = (s: ServerSettings) => {
+    setCodeLength(s.codeLength);
+    setPrefixAppName(s.prefixAppName);
+    setIncludeNumbers(s.includeNumbers);
+    setLetterCase(s.letterCase);
+    setIncludeSpecial(s.includeSpecial);
+  };
 
   useEffect(() => {
-    if (serverSettings) {
-      setCodeLength(serverSettings.codeLength);
-      setPrefixAppName(serverSettings.prefixAppName);
-    }
+    if (serverSettings) syncFromServer(serverSettings);
   }, [serverSettings]);
 
-  const persistCodeLength = async (value: number) => {
-    const clamped = Math.max(4, Math.min(64, Math.round(value) || 4));
-    setCodeLength(clamped);
+  const persist = async (partial: Partial<ServerSettings>) => {
     try {
-      const saved = await updateServerSettings({ codeLength: clamped });
-      setCodeLength(saved.codeLength);
-      showToast('success', `Access code length set to ${saved.codeLength}`);
+      const saved = await updateServerSettings(partial);
+      syncFromServer(saved);
+      showToast('success', 'Token generation setting updated');
     } catch (err) {
       showToast('error', (err as { message?: string })?.message || 'Failed to update setting');
     }
   };
 
-  const persistPrefix = async (value: boolean) => {
-    if (value === prefixAppName) return;
-    const previous = prefixAppName;
-    setPrefixAppName(value);
-    try {
-      const saved = await updateServerSettings({ prefixAppName: value });
-      setPrefixAppName(saved.prefixAppName);
-      showToast('success', 'Token generation setting updated');
-    } catch (err) {
-      setPrefixAppName(previous);
-      showToast('error', (err as { message?: string })?.message || 'Failed to update setting');
-    }
+  const persistCodeLength = (value: number) => {
+    const clamped = Math.max(4, Math.min(64, Math.round(value) || 4));
+    setCodeLength(clamped);
+    void persist({ codeLength: clamped });
+  };
+
+  const setCase = (c: LetterCase) => {
+    if (c !== letterCase) void persist({ letterCase: c });
+  };
+  const setNumbers = (v: boolean) => {
+    if (v !== includeNumbers) void persist({ includeNumbers: v });
+  };
+  const setSpecial = (v: boolean) => {
+    if (v !== includeSpecial) void persist({ includeSpecial: v });
+  };
+  const setPrefix = (v: boolean) => {
+    if (v !== prefixAppName) void persist({ prefixAppName: v });
   };
 
   return (
@@ -167,13 +179,65 @@ export function SettingsPage() {
           </div>
 
           <div class={styles.field}>
+            <label class={styles.label}>Letter Case</label>
+            <div class={styles.options}>
+              {(['lower', 'upper', 'both'] as const).map((c) => (
+                <button
+                  key={c}
+                  class={`${styles.optionBtn} ${letterCase === c ? styles.optionBtnActive : ''}`}
+                  onClick={() => setCase(c)}
+                >
+                  {c.charAt(0).toUpperCase() + c.slice(1)}
+                </button>
+              ))}
+            </div>
+            <span class={styles.hint}>
+              Which letters appear in generated codes. Letters are always included.
+            </span>
+          </div>
+
+          <div class={styles.field}>
+            <label class={styles.label}>Include Numbers</label>
+            <div class={styles.options}>
+              {([[false, 'Off'], [true, 'On']] as const).map(([val, label]) => (
+                <button
+                  key={label}
+                  class={`${styles.optionBtn} ${includeNumbers === val ? styles.optionBtnActive : ''}`}
+                  onClick={() => setNumbers(val)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <span class={styles.hint}>Add digits (0–9) to generated codes.</span>
+          </div>
+
+          <div class={styles.field}>
+            <label class={styles.label}>Special Characters</label>
+            <div class={styles.options}>
+              {([[false, 'Off'], [true, 'On']] as const).map(([val, label]) => (
+                <button
+                  key={label}
+                  class={`${styles.optionBtn} ${includeSpecial === val ? styles.optionBtnActive : ''}`}
+                  onClick={() => setSpecial(val)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <span class={styles.hint}>
+              Add basic symbols (<code class="mono">!@#$%^&amp;*</code>) to generated codes.
+            </span>
+          </div>
+
+          <div class={styles.field}>
             <label class={styles.label}>Prefix App Name</label>
             <div class={styles.options}>
               {([[false, 'Off'], [true, 'On']] as const).map(([val, label]) => (
                 <button
                   key={label}
                   class={`${styles.optionBtn} ${prefixAppName === val ? styles.optionBtnActive : ''}`}
-                  onClick={() => persistPrefix(val)}
+                  onClick={() => setPrefix(val)}
                 >
                   {label}
                 </button>

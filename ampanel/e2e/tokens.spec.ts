@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { SECURITY_KEY, OPERATOR_KEY } from './helpers';
+import { SECURITY_KEY, OPERATOR_KEY, BASE_URL, operatorHeaders } from './helpers';
 
 async function login(page: Page): Promise<void> {
   await page.goto('/login');
@@ -55,14 +55,19 @@ test.describe('Token List Page', () => {
   });
 
   test('searches by token prefix', async ({ page }) => {
-    // Get a token prefix from the table first
-    const prefixCell = page.locator('table td').filter({ hasText: /^testapp_/ }).first();
-    const prefix = await prefixCell.textContent();
+    // Token prefix format depends on server settings (default: short hex code, no
+    // app-name prefix), so read a real prefix from the API instead of guessing.
+    const res = await fetch(`${BASE_URL}/api/tokens?appName=testapp&limit=1`, {
+      headers: operatorHeaders(),
+    });
+    const data = await res.json();
+    const prefix: string | undefined = data.data?.[0]?.tokenPrefix;
+    expect(prefix).toBeTruthy();
 
-    if (prefix) {
-      await page.getByPlaceholder('Search Token Prefix...').fill(prefix.slice(0, 12));
-      await expect(page.locator('table').getByText(prefix)).toBeVisible();
-    }
+    await page.getByPlaceholder('Search Token Prefix...').fill(prefix!);
+    await expect(
+      page.locator('table').getByText(prefix!, { exact: false }).first(),
+    ).toBeVisible();
   });
 
   test('navigates to token detail on row click', async ({ page }) => {

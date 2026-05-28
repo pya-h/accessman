@@ -71,7 +71,7 @@ All API requests require two headers: `X-Security` (shared key) and `X-App-Name`
 | `GET` | `/api/apps` | List all registered apps |
 | `POST` | `/api/apps` | Register a new app |
 | `GET` | `/api/settings` | Read token-generation settings |
-| `PATCH` | `/api/settings` | Update code length / app-name prefix |
+| `PATCH` | `/api/settings` | Update code length / character set / app-name prefix |
 
 ### Import Fields
 
@@ -88,13 +88,20 @@ All import endpoints support an optional `token` field per item, allowing operat
 
 ## Token Format
 
-By default a token is a random hex code of the configured length (default 4), with no app-name prefix:
+By default a token is a random code of the configured length (default 4), drawn from lowercase letters + digits, with no app-name prefix:
 
 ```
 a1b2
 ```
 
-Code length and an optional app-name prefix are controlled by the `GET`/`PATCH /api/settings` endpoints (`codeLength` 4-64, default 4; `prefixAppName` default false — display only). Tokens are stored as SHA-256 hashes and the raw token is returned only once at creation time. Each token is scoped to one user + one app (one active token per pair); the owning app is verified against the `X-App-Name` header, not the token text.
+Generation is controlled by the `GET`/`PATCH /api/settings` endpoints:
+- `codeLength` (4-64, default 4)
+- `letterCase` (`lower`/`upper`/`both`, default `lower`) — letters are always included
+- `includeNumbers` (default true) — digits 0-9
+- `includeSpecial` (default false) — basic symbols `!@#$%^&*`
+- `prefixAppName` (default false) — display-only `{appName}_` prefix
+
+Tokens are stored as SHA-256 hashes and the raw token is returned only once at creation time. Each token is scoped to one user + one app (one active token per pair); the owning app is verified against the `X-App-Name` header, not the token text.
 
 ## Scripts
 

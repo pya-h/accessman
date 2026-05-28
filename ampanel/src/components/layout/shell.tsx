@@ -2,7 +2,7 @@ import { useState } from 'preact/hooks';
 import { useLocation } from 'preact-iso';
 import type { ComponentChildren, JSX } from 'preact';
 import { useAuth } from '@/auth/auth-context';
-import { IconKey, IconBox, IconImport, IconSettings, IconLogout, IconMenu, IconX } from '@/components/icons';
+import { IconKey, IconBox, IconImport, IconShield, IconSettings, IconLogout, IconMenu, IconX } from '@/components/icons';
 import styles from './shell.module.css';
 
 interface NavItem {
@@ -15,6 +15,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/tokens', label: 'Tokens', icon: () => <IconKey size={18} /> },
   { path: '/apps', label: 'Apps', icon: () => <IconBox size={18} /> },
   { path: '/import', label: 'Import', icon: () => <IconImport size={18} /> },
+  { path: '/verify', label: 'Verify', icon: () => <IconShield size={18} /> },
   { path: '/settings', label: 'Settings', icon: () => <IconSettings size={18} /> },
 ];
 

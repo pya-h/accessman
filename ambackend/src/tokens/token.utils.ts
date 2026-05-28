@@ -1,10 +1,45 @@
-import { randomBytes, createHash } from 'crypto';
+import { randomInt, createHash } from 'crypto';
 
 export const MIN_CODE_LENGTH = 4;
 export const MAX_CODE_LENGTH = 64;
 export const DEFAULT_CODE_LENGTH = 4;
 // How many times generation retries when a random code collides with an existing one.
 export const MAX_GENERATION_ATTEMPTS = 10;
+
+const LOWER_CHARS = 'abcdefghijklmnopqrstuvwxyz';
+const UPPER_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const DIGIT_CHARS = '0123456789';
+// A small, recognizable set of basic special characters.
+const SPECIAL_CHARS = '!@#$%^&*';
+
+export type LetterCase = 'upper' | 'lower' | 'both';
+
+export interface CharsetOptions {
+  includeNumbers: boolean;
+  letterCase: LetterCase;
+  includeSpecial: boolean;
+}
+
+export const DEFAULT_CHARSET: CharsetOptions = {
+  includeNumbers: true,
+  letterCase: 'lower',
+  includeSpecial: false,
+};
+
+// Builds the alphabet codes are drawn from. Letters are always present
+// (the case toggle only picks which), so the alphabet is never empty.
+export function buildAlphabet(charset: CharsetOptions): string {
+  let alphabet = '';
+  if (charset.letterCase === 'lower' || charset.letterCase === 'both') {
+    alphabet += LOWER_CHARS;
+  }
+  if (charset.letterCase === 'upper' || charset.letterCase === 'both') {
+    alphabet += UPPER_CHARS;
+  }
+  if (charset.includeNumbers) alphabet += DIGIT_CHARS;
+  if (charset.includeSpecial) alphabet += SPECIAL_CHARS;
+  return alphabet;
+}
 
 // Display prefix shown to operators: the whole code if shorter than 8 chars,
 // otherwise the first 8. When prefixAppName is on, the app name is prepended
@@ -22,14 +57,19 @@ export function generateToken(
   appName: string,
   codeLength: number = DEFAULT_CODE_LENGTH,
   prefixAppName: boolean = false,
+  charset: CharsetOptions = DEFAULT_CHARSET,
 ): {
   raw: string;
   hash: string;
   prefix: string;
 } {
-  const code = randomBytes(Math.ceil(codeLength / 2))
-    .toString('hex')
-    .substring(0, codeLength);
+  const alphabet = buildAlphabet(charset);
+  let code = '';
+  // randomInt is unbiased (rejection sampling internally), so the code is
+  // exactly codeLength characters drawn uniformly from the alphabet.
+  for (let i = 0; i < codeLength; i++) {
+    code += alphabet[randomInt(alphabet.length)];
+  }
   const raw = prefixAppName ? `${appName}_${code}` : code;
   const hash = createHash('sha256').update(raw).digest('hex');
   const prefix = buildPrefix(appName, code, prefixAppName);

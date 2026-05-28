@@ -10,6 +10,7 @@ import { TokenDetailPage } from '@/pages/tokens/token-detail';
 import { AppListPage } from '@/pages/apps/app-list';
 import { ImportPage } from '@/pages/import/import';
 import { ImportResultsPage } from '@/pages/import/import-results';
+import { VerifyPage } from '@/pages/verify/verify';
 import { SettingsPage } from '@/pages/settings/settings';
 
 applySettings(getSettings());
@@ -35,6 +36,7 @@ function AppRouter() {
         <Route path="/apps" component={AppListPage} />
         <Route path="/import" component={ImportPage} />
         <Route path="/import/results" component={ImportResultsPage} />
+        <Route path="/verify" component={VerifyPage} />
         <Route path="/settings" component={SettingsPage} />
         <Route default component={TokenListPage} />
       </Router>

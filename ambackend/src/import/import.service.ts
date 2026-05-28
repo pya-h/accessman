@@ -11,6 +11,7 @@ import {
   validateCustomToken,
   processCustomToken,
   MAX_GENERATION_ATTEMPTS,
+  type CharsetOptions,
 } from '../tokens/token.utils';
 import { SettingsService } from '../settings/settings.service';
 
@@ -28,9 +29,15 @@ export class ImportService {
     appName: string,
     codeLength: number,
     prefixAppName: boolean,
+    charset: CharsetOptions,
   ): Promise<{ raw: string; hash: string; prefix: string } | null> {
     for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt++) {
-      const candidate = generateToken(appName, codeLength, prefixAppName);
+      const candidate = generateToken(
+        appName,
+        codeLength,
+        prefixAppName,
+        charset,
+      );
       const clash = await manager.findOne(TokenEntity, {
         where: { tokenHash: candidate.hash },
       });
@@ -55,7 +62,13 @@ export class ImportService {
     }[];
     errors: { userId: string; appName: string; reason: string }[];
   }> {
-    const { codeLength, prefixAppName } = await this.settingsService.get();
+    const settings = await this.settingsService.get();
+    const { codeLength, prefixAppName } = settings;
+    const charset: CharsetOptions = {
+      includeNumbers: settings.includeNumbers,
+      letterCase: settings.letterCase,
+      includeSpecial: settings.includeSpecial,
+    };
 
     return this.dataSource.transaction(async (manager) => {
       const imported: {
@@ -137,6 +150,7 @@ export class ImportService {
             item.appName,
             codeLength,
             prefixAppName,
+            charset,
           );
           if (!generated) {
             errors.push({
@@ -189,7 +203,13 @@ export class ImportService {
     }[];
     errors: { userId: string; appName: string; reason: string }[];
   }> {
-    const { codeLength, prefixAppName } = await this.settingsService.get();
+    const settings = await this.settingsService.get();
+    const { codeLength, prefixAppName } = settings;
+    const charset: CharsetOptions = {
+      includeNumbers: settings.includeNumbers,
+      letterCase: settings.letterCase,
+      includeSpecial: settings.includeSpecial,
+    };
 
     return this.dataSource.transaction(async (manager) => {
       const imported: {
@@ -259,6 +279,7 @@ export class ImportService {
             item.appName,
             codeLength,
             prefixAppName,
+            charset,
           );
           if (!generated) {
             errors.push({

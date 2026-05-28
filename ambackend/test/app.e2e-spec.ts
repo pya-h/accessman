@@ -260,7 +260,7 @@ describe('AccessMan E2E', () => {
       expect(body.imported).toHaveLength(2);
       expect(body.errors).toHaveLength(0);
       // Default: 4-char hex code, no app-name prefix
-      expect(body.imported[0].token).toMatch(/^[0-9a-f]{4}$/);
+      expect(body.imported[0].token).toMatch(/^[a-z0-9]{4}$/);
       expect(body.imported[0].userId).toBe('user1');
     });
 
@@ -378,7 +378,7 @@ describe('AccessMan E2E', () => {
       const body = JSON.parse(res.payload);
       expect(body.imported).toHaveLength(2);
       expect(body.imported[0].appName).toBe('perapp');
-      expect(body.imported[0].token).toMatch(/^[0-9a-f]{4}$/);
+      expect(body.imported[0].token).toMatch(/^[a-z0-9]{4}$/);
     });
 
     it('invalid items → 400', async () => {
@@ -1190,7 +1190,43 @@ describe('AccessMan E2E', () => {
       expect(JSON.parse(res.payload)).toEqual({
         codeLength: 4,
         prefixAppName: false,
+        includeNumbers: true,
+        letterCase: 'lower',
+        includeSpecial: false,
       });
+    });
+
+    it('charset settings shape generated codes (uppercase, no numbers)', async () => {
+      const patchRes = await app.inject({
+        method: 'PATCH',
+        url: '/api/settings',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: { letterCase: 'upper', includeNumbers: false, codeLength: 8 },
+      });
+      expect(patchRes.statusCode).toBe(200);
+      expect(JSON.parse(patchRes.payload)).toMatchObject({
+        letterCase: 'upper',
+        includeNumbers: false,
+      });
+
+      const importRes = await app.inject({
+        method: 'POST',
+        url: '/api/import',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [{ userId: 'u1', appName: 'charsetapp' }],
+      });
+      const body = JSON.parse(importRes.payload);
+      expect(body.imported[0].token).toMatch(/^[A-Z]{8}$/);
+    });
+
+    it('rejects an invalid letterCase value', async () => {
+      const res = await app.inject({
+        method: 'PATCH',
+        url: '/api/settings',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: { letterCase: 'sideways' },
+      });
+      expect(res.statusCode).toBe(400);
     });
 
     it('PATCH code length is honored by subsequent imports', async () => {
@@ -1210,7 +1246,7 @@ describe('AccessMan E2E', () => {
         payload: [{ userId: 'u1', appName: 'lenapp' }],
       });
       const body = JSON.parse(importRes.payload);
-      expect(body.imported[0].token).toMatch(/^[0-9a-f]{12}$/);
+      expect(body.imported[0].token).toMatch(/^[a-z0-9]{12}$/);
     });
 
     it('PATCH prefixAppName prepends the app name to generated tokens', async () => {
@@ -1229,7 +1265,7 @@ describe('AccessMan E2E', () => {
       });
       const body = JSON.parse(importRes.payload);
       const rawToken = body.imported[0].token;
-      expect(rawToken).toMatch(/^prefapp2_[0-9a-f]{4}$/);
+      expect(rawToken).toMatch(/^prefapp2_[a-z0-9]{4}$/);
 
       // The prefixed token still verifies (app checked via header, not prefix)
       const verifyRes = await app.inject({
@@ -1304,7 +1340,7 @@ describe('AccessMan E2E', () => {
       const importBody = JSON.parse(importRes.payload);
       expect(importBody.imported).toHaveLength(1);
       const rawToken = importBody.imported[0].token;
-      expect(rawToken).toMatch(/^[0-9a-f]{4}$/);
+      expect(rawToken).toMatch(/^[a-z0-9]{4}$/);
 
       // Verify
       const verifyRes = await app.inject({
@@ -1482,7 +1518,7 @@ describe('AccessMan E2E', () => {
       const body = JSON.parse(res.payload);
       expect(body.data).toHaveLength(1);
       // Default 4-char code shown in full (shorter than 8), no app-name prefix
-      expect(body.data[0].tokenPrefix).toMatch(/^[0-9a-f]{4}$/);
+      expect(body.data[0].tokenPrefix).toMatch(/^[a-z0-9]{4}$/);
     });
 
     it('metadata update on non-existent token → 404', async () => {
@@ -1529,7 +1565,7 @@ describe('AccessMan E2E', () => {
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
       );
       expect(body.imported[0].appName).toBe('autoidapp');
-      expect(body.imported[0].token).toMatch(/^[0-9a-f]{4}$/);
+      expect(body.imported[0].token).toMatch(/^[a-z0-9]{4}$/);
     });
 
     it('per-app import without userId → auto-generates UUID', async () => {

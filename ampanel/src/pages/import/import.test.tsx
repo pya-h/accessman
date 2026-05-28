@@ -229,4 +229,57 @@ describe('ImportPage', () => {
       expect(mockShowToast).toHaveBeenCalledWith('success', 'Converted to CSV');
     });
   });
+
+  describe('Add Row', () => {
+    it('populates an empty JSON box (regression: empty box used to drop the row)', async () => {
+      render(<ImportPage />);
+
+      fireEvent.click(screen.getByRole('button', { name: /add row/i }));
+      fireEvent.input(screen.getByPlaceholderText('user-123'), { target: { value: 'u1' } });
+      fireEvent.input(screen.getByPlaceholderText('myapp'), { target: { value: 'app1' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+      await waitFor(() => {
+        const textarea = screen.getByPlaceholderText(/paste json/i) as HTMLTextAreaElement;
+        expect(textarea.value).toContain('"userId": "u1"');
+        expect(textarea.value).toContain('"appName": "app1"');
+      });
+    });
+
+    it('populates an empty CSV box', async () => {
+      render(<ImportPage />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'CSV' }));
+      fireEvent.click(screen.getByRole('button', { name: /add row/i }));
+      fireEvent.input(screen.getByPlaceholderText('user-123'), { target: { value: 'u9' } });
+      fireEvent.input(screen.getByPlaceholderText('myapp'), { target: { value: 'app9' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+      await waitFor(() => {
+        const textarea = screen.getByPlaceholderText(/paste csv/i) as HTMLTextAreaElement;
+        expect(textarea.value).toContain('userId,appName');
+        expect(textarea.value).toContain('u9,app9');
+      });
+    });
+
+    it('appends a row to existing JSON content', async () => {
+      render(<ImportPage />);
+
+      const textarea = screen.getByPlaceholderText(/paste json/i);
+      fireEvent.input(textarea, {
+        target: { value: '[{"userId":"first","appName":"app1"}]' },
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /add row/i }));
+      fireEvent.input(screen.getByPlaceholderText('user-123'), { target: { value: 'second' } });
+      fireEvent.input(screen.getByPlaceholderText('myapp'), { target: { value: 'app2' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+      await waitFor(() => {
+        const ta = screen.getByPlaceholderText(/paste json/i) as HTMLTextAreaElement;
+        expect(ta.value).toContain('first');
+        expect(ta.value).toContain('second');
+      });
+    });
+  });
 });

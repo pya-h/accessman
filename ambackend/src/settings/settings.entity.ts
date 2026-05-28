@@ -12,6 +12,20 @@ export class SettingsEntity {
   @Column({ name: 'prefix_app_name', type: 'boolean', default: false })
   prefixAppName: boolean;
 
+  @Column({ name: 'include_numbers', type: 'boolean', default: true })
+  includeNumbers: boolean;
+
+  @Column({
+    name: 'letter_case',
+    type: 'varchar',
+    length: 10,
+    default: 'lower',
+  })
+  letterCase: 'upper' | 'lower' | 'both';
+
+  @Column({ name: 'include_special', type: 'boolean', default: false })
+  includeSpecial: boolean;
+
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

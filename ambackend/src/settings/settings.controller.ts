@@ -24,6 +24,9 @@ export class SettingsController {
     return {
       codeLength: settings.codeLength,
       prefixAppName: settings.prefixAppName,
+      includeNumbers: settings.includeNumbers,
+      letterCase: settings.letterCase,
+      includeSpecial: settings.includeSpecial,
     };
   }
 }

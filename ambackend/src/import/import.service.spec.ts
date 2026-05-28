@@ -33,7 +33,13 @@ describe('ImportService', () => {
     };
 
     mockSettingsService = {
-      get: jest.fn().mockResolvedValue({ codeLength: 4, prefixAppName: false }),
+      get: jest.fn().mockResolvedValue({
+        codeLength: 4,
+        prefixAppName: false,
+        includeNumbers: true,
+        letterCase: 'lower',
+        includeSpecial: false,
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -61,7 +67,7 @@ describe('ImportService', () => {
       expect(result.errors).toHaveLength(0);
       expect(result.imported[0].userId).toBe('user1');
       expect(result.imported[0].appName).toBe('myapp');
-      expect(result.imported[0].token).toMatch(/^[0-9a-f]{4}$/);
+      expect(result.imported[0].token).toMatch(/^[a-z0-9]{4}$/);
       expect(result.imported[0].expiresAt).toBeNull();
     });
 
@@ -479,7 +485,7 @@ describe('ImportService', () => {
       expect(result.imported).toHaveLength(2);
       expect(result.errors).toHaveLength(0);
       expect(result.imported[0].token).toBe(customToken);
-      expect(result.imported[1].token).toMatch(/^[0-9a-f]{4}$/);
+      expect(result.imported[1].token).toMatch(/^[a-z0-9]{4}$/);
     });
   });
 
@@ -532,6 +538,9 @@ describe('ImportService', () => {
       mockSettingsService.get.mockResolvedValue({
         codeLength: 10,
         prefixAppName: false,
+        includeNumbers: true,
+        letterCase: 'lower',
+        includeSpecial: false,
       });
       mockManager.findOne
         .mockResolvedValueOnce({ id: 1, name: 'myapp' })
@@ -542,13 +551,16 @@ describe('ImportService', () => {
       ]);
 
       expect(result.imported).toHaveLength(1);
-      expect(result.imported[0].token).toMatch(/^[0-9a-f]{10}$/);
+      expect(result.imported[0].token).toMatch(/^[a-z0-9]{10}$/);
     });
 
     it('prepends app name to generated token when prefixAppName is on', async () => {
       mockSettingsService.get.mockResolvedValue({
         codeLength: 4,
         prefixAppName: true,
+        includeNumbers: true,
+        letterCase: 'lower',
+        includeSpecial: false,
       });
       mockManager.findOne
         .mockResolvedValueOnce({ id: 1, name: 'myapp' })
@@ -559,10 +571,10 @@ describe('ImportService', () => {
       ]);
 
       expect(result.imported).toHaveLength(1);
-      expect(result.imported[0].token).toMatch(/^myapp_[0-9a-f]{4}$/);
+      expect(result.imported[0].token).toMatch(/^myapp_[a-z0-9]{4}$/);
       // Prefix shows the whole code since it's shorter than 8 chars
       const savedToken = mockManager.save.mock.calls[0][0];
-      expect(savedToken.tokenPrefix).toMatch(/^myapp_[0-9a-f]{4}$/);
+      expect(savedToken.tokenPrefix).toMatch(/^myapp_[a-z0-9]{4}$/);
     });
 
     it('reports an error when no unique code can be generated', async () => {
@@ -584,6 +596,26 @@ describe('ImportService', () => {
       expect(result.imported).toHaveLength(0);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].reason).toContain('unique code');
+    });
+
+    it('honors charset: uppercase letters only, no numbers', async () => {
+      mockSettingsService.get.mockResolvedValue({
+        codeLength: 8,
+        prefixAppName: false,
+        includeNumbers: false,
+        letterCase: 'upper',
+        includeSpecial: false,
+      });
+      mockManager.findOne
+        .mockResolvedValueOnce({ id: 1, name: 'myapp' })
+        .mockResolvedValueOnce(null);
+
+      const result = await service.importTokens([
+        { userId: 'user1', appName: 'myapp' },
+      ]);
+
+      expect(result.imported).toHaveLength(1);
+      expect(result.imported[0].token).toMatch(/^[A-Z]{8}$/);
     });
   });
 
@@ -688,7 +720,7 @@ describe('ImportService', () => {
       expect(importResult.errors).toHaveLength(0);
       expect(importResult.imported[0].userId).toBe(randUser);
       expect(importResult.imported[0].appName).toBe(randApp);
-      expect(importResult.imported[0].token).toMatch(/^[0-9a-f]{4}$/);
+      expect(importResult.imported[0].token).toMatch(/^[a-z0-9]{4}$/);
       expect(importResult.imported[0].expiresAt).toEqual(new Date(expiresAt));
 
       // Reissue for the same random user+app

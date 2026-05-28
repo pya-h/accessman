@@ -1,4 +1,4 @@
-import { IsOptional, IsInt, IsBoolean, Min, Max } from 'class-validator';
+import { IsOptional, IsInt, IsBoolean, IsIn, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 import { MIN_CODE_LENGTH, MAX_CODE_LENGTH } from '../../tokens/token.utils';
 
@@ -13,4 +13,16 @@ export class UpdateSettingsDto {
   @IsOptional()
   @IsBoolean()
   prefixAppName?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  includeNumbers?: boolean;
+
+  @IsOptional()
+  @IsIn(['upper', 'lower', 'both'])
+  letterCase?: 'upper' | 'lower' | 'both';
+
+  @IsOptional()
+  @IsBoolean()
+  includeSpecial?: boolean;
 }

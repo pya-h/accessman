@@ -26,13 +26,13 @@ AccessMan handles issuance, storage, and verification. Consuming apps handle dis
 
 ## Token Format
 
-By default a token is just a random hex code of a configurable length (default **4**):
+By default a token is just a random code of a configurable length (default **4**), drawn from lowercase letters + digits:
 
 ```
 a1b2
 ```
 
-The code length and an optional app-name prefix are operator-configurable settings (see Settings below). When the prefix is enabled, generated tokens look like `{appName}_{code}` — but this is **display only**; the app name is never parsed from the token.
+The code length, **character set** (letter case, digits, basic special characters), and an optional app-name prefix are operator-configurable settings (see Settings below). When the prefix is enabled, generated tokens look like `{appName}_{code}` — but this is **display only**; the app name is never parsed from the token.
 
 Tokens are stored as SHA-256 hashes and returned only once at creation time. Each token is scoped to one user + one app, and the owning app is verified against the `X-App-Name` header (not the token text). Operators can optionally provide custom token strings during import (any string **4–64 characters**, no prefix required).
 
@@ -61,7 +61,7 @@ Key endpoints:
 - `GET /api/apps` -- list registered apps (operator)
 - `POST /api/apps` -- register a new app (operator)
 - `GET /api/settings` -- read token-generation settings (operator)
-- `PATCH /api/settings` -- update code length / app-name prefix (operator)
+- `PATCH /api/settings` -- update code length / character set / app-name prefix (operator)
 
 See [ambackend/README.md](ambackend/README.md) for setup and full API reference.
 
@@ -74,7 +74,8 @@ Operator-facing web interface built with Preact + Vite. Provides visual access t
 - **Import results**: one-time display of raw tokens with copy/download, error summary
 - **App management**: view registered apps, register new ones
 - **Revocation**: revoke tokens from list or detail view with confirmation
-- **Settings**: theme (light/dark), font size, table density, and token generation (access code length, app-name prefix toggle)
+- **Verify**: check a token against its app and inspect the result (validity, user, expiry, metadata)
+- **Settings**: theme (light/dark), font size, table density, and token generation (access code length, letter case, numbers, special characters, app-name prefix toggle)
 
 The panel authenticates using Tier 2 credentials entered at login, stored in `sessionStorage`. No server-side sessions.
 

@@ -45,3 +45,18 @@ export function getToken(id: number): Promise<TokenRecord> {
 export function revokeToken(id: number): Promise<{ success: true; revokedAt: string }> {
   return request(`/api/tokens/${id}/revoke`, { method: 'POST' });
 }
+
+export interface VerifyResult {
+  valid: boolean;
+  userId?: string;
+  appName?: string;
+  metadata?: Record<string, unknown>;
+  expiresAt?: string | null;
+  reason?: string;
+}
+
+// Verify is a Tier 1 endpoint scoped to the token's owning app, so the app name
+// is sent as X-App-Name (not the admin app).
+export function verifyToken(appName: string, token: string): Promise<VerifyResult> {
+  return request('/api/tokens/verify', { method: 'POST', body: { token }, appName });
+}
