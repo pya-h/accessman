@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { DataSource, IsNull } from 'typeorm';
+import { DataSource, EntityManager, IsNull } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { parse } from 'csv-parse/sync';
@@ -10,11 +10,34 @@ import {
   generateToken,
   validateCustomToken,
   processCustomToken,
+  MAX_GENERATION_ATTEMPTS,
 } from '../tokens/token.utils';
+import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
 export class ImportService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly settingsService: SettingsService,
+  ) {}
+
+  // Generates a unique token, retrying on hash collisions (likely with short
+  // codes). Returns null if no unique code was found within the attempt budget.
+  private async generateUniqueToken(
+    manager: EntityManager,
+    appName: string,
+    codeLength: number,
+    prefixAppName: boolean,
+  ): Promise<{ raw: string; hash: string; prefix: string } | null> {
+    for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt++) {
+      const candidate = generateToken(appName, codeLength, prefixAppName);
+      const clash = await manager.findOne(TokenEntity, {
+        where: { tokenHash: candidate.hash },
+      });
+      if (!clash) return candidate;
+    }
+    return null;
+  }
 
   async importTokens(
     items: {
@@ -32,6 +55,8 @@ export class ImportService {
     }[];
     errors: { userId: string; appName: string; reason: string }[];
   }> {
+    const { codeLength, prefixAppName } = await this.settingsService.get();
+
     return this.dataSource.transaction(async (manager) => {
       const imported: {
         userId: string;
@@ -79,7 +104,7 @@ export class ImportService {
         let raw: string, hash: string, prefix: string;
 
         if (item.token) {
-          const validationError = validateCustomToken(item.token, item.appName);
+          const validationError = validateCustomToken(item.token);
           if (validationError) {
             errors.push({
               userId,
@@ -89,7 +114,7 @@ export class ImportService {
             continue;
           }
 
-          const processed = processCustomToken(item.token, item.appName);
+          const processed = processCustomToken(item.token);
           raw = processed.raw;
           hash = processed.hash;
           prefix = processed.prefix;
@@ -107,7 +132,21 @@ export class ImportService {
             continue;
           }
         } else {
-          ({ raw, hash, prefix } = generateToken(item.appName));
+          const generated = await this.generateUniqueToken(
+            manager,
+            item.appName,
+            codeLength,
+            prefixAppName,
+          );
+          if (!generated) {
+            errors.push({
+              userId,
+              appName: item.appName,
+              reason: `Could not generate a unique code after ${MAX_GENERATION_ATTEMPTS} attempts. Increase the code length, provide a custom token, or retry.`,
+            });
+            continue;
+          }
+          ({ raw, hash, prefix } = generated);
         }
 
         const expiresAt = item.expiresAt ? new Date(item.expiresAt) : null;
@@ -150,6 +189,8 @@ export class ImportService {
     }[];
     errors: { userId: string; appName: string; reason: string }[];
   }> {
+    const { codeLength, prefixAppName } = await this.settingsService.get();
+
     return this.dataSource.transaction(async (manager) => {
       const imported: {
         userId: string;
@@ -185,7 +226,7 @@ export class ImportService {
         let raw: string, hash: string, prefix: string;
 
         if (item.token) {
-          const validationError = validateCustomToken(item.token, item.appName);
+          const validationError = validateCustomToken(item.token);
           if (validationError) {
             errors.push({
               userId: item.userId,
@@ -195,7 +236,7 @@ export class ImportService {
             continue;
           }
 
-          const processed = processCustomToken(item.token, item.appName);
+          const processed = processCustomToken(item.token);
           raw = processed.raw;
           hash = processed.hash;
           prefix = processed.prefix;
@@ -213,7 +254,21 @@ export class ImportService {
             continue;
           }
         } else {
-          ({ raw, hash, prefix } = generateToken(item.appName));
+          const generated = await this.generateUniqueToken(
+            manager,
+            item.appName,
+            codeLength,
+            prefixAppName,
+          );
+          if (!generated) {
+            errors.push({
+              userId: item.userId,
+              appName: item.appName,
+              reason: `Could not generate a unique code after ${MAX_GENERATION_ATTEMPTS} attempts. Increase the code length, provide a custom token, or retry.`,
+            });
+            continue;
+          }
+          ({ raw, hash, prefix } = generated);
         }
 
         if (existing) {

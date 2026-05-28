@@ -4,13 +4,15 @@
 ### --------------------------------------------------------
 
 ### Verify a token
+# The raw token is whatever was returned at import (no app-name prefix by default).
+# The app is checked against X-App-Name, not the token's text.
 POST {{$dotenv HOST}}/tokens/verify
 Content-Type: application/json
 X-Security: {{$dotenv SECURITY_KEY}}
 X-App-Name: myapp
 
 {
-  "token": "myapp_PASTE_RAW_TOKEN_HERE"
+  "token": "PASTE_RAW_TOKEN_HERE"
 }
 
 ### Update token metadata
@@ -20,7 +22,7 @@ X-Security: {{$dotenv SECURITY_KEY}}
 X-App-Name: myapp
 
 {
-  "token": "myapp_PASTE_RAW_TOKEN_HERE",
+  "token": "PASTE_RAW_TOKEN_HERE",
   "metadata": {
     "role": "admin",
     "note": "promoted"
@@ -51,7 +53,7 @@ X-App-Name: {{$dotenv ADMIN_APP_NAME}}
 X-Operator-Key: {{$dotenv OPERATOR_KEY}}
 
 ### List tokens — filter by token prefix
-GET {{$dotenv HOST}}/tokens?tokenPrefix=myapp_7f3a
+GET {{$dotenv HOST}}/tokens?tokenPrefix=7f3a
 X-Security: {{$dotenv SECURITY_KEY}}
 X-App-Name: {{$dotenv ADMIN_APP_NAME}}
 X-Operator-Key: {{$dotenv OPERATOR_KEY}}

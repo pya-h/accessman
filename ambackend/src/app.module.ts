@@ -7,6 +7,7 @@ import { typeormConfig } from './typeorm.config';
 import { AppsModule } from './apps/apps.module';
 import { TokensModule } from './tokens/tokens.module';
 import { ImportModule } from './import/import.module';
+import { SettingsModule } from './settings/settings.module';
 import securityConfig from './config/security.config';
 
 @Module({
@@ -24,6 +25,7 @@ import securityConfig from './config/security.config';
     AppsModule,
     TokensModule,
     ImportModule,
+    SettingsModule,
   ],
 })
 export class AppModule {}

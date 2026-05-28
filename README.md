@@ -26,11 +26,15 @@ AccessMan handles issuance, storage, and verification. Consuming apps handle dis
 
 ## Token Format
 
+By default a token is just a random hex code of a configurable length (default **4**):
+
 ```
-{appName}_{64_hex_chars}
+a1b2
 ```
 
-Tokens are stored as SHA-256 hashes and returned only once at creation time. Each token is scoped to one user + one app. Operators can optionally provide custom token strings during import (format: `{appName}_{CODE}`, CODE 8-64 chars).
+The code length and an optional app-name prefix are operator-configurable settings (see Settings below). When the prefix is enabled, generated tokens look like `{appName}_{code}` — but this is **display only**; the app name is never parsed from the token.
+
+Tokens are stored as SHA-256 hashes and returned only once at creation time. Each token is scoped to one user + one app, and the owning app is verified against the `X-App-Name` header (not the token text). Operators can optionally provide custom token strings during import (any string **4–64 characters**, no prefix required).
 
 ## Security Model
 
@@ -56,6 +60,8 @@ Key endpoints:
 - `POST /api/tokens/:id/revoke` -- revoke a token (operator)
 - `GET /api/apps` -- list registered apps (operator)
 - `POST /api/apps` -- register a new app (operator)
+- `GET /api/settings` -- read token-generation settings (operator)
+- `PATCH /api/settings` -- update code length / app-name prefix (operator)
 
 See [ambackend/README.md](ambackend/README.md) for setup and full API reference.
 
@@ -68,7 +74,7 @@ Operator-facing web interface built with Preact + Vite. Provides visual access t
 - **Import results**: one-time display of raw tokens with copy/download, error summary
 - **App management**: view registered apps, register new ones
 - **Revocation**: revoke tokens from list or detail view with confirmation
-- **Settings**: theme (light/dark), font size, table density
+- **Settings**: theme (light/dark), font size, table density, and token generation (access code length, app-name prefix toggle)
 
 The panel authenticates using Tier 2 credentials entered at login, stored in `sessionStorage`. No server-side sessions.
 

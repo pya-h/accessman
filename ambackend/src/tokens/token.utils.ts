@@ -1,14 +1,38 @@
 import { randomBytes, createHash } from 'crypto';
 
-export function generateToken(appName: string): {
+export const MIN_CODE_LENGTH = 4;
+export const MAX_CODE_LENGTH = 64;
+export const DEFAULT_CODE_LENGTH = 4;
+// How many times generation retries when a random code collides with an existing one.
+export const MAX_GENERATION_ATTEMPTS = 10;
+
+// Display prefix shown to operators: the whole code if shorter than 8 chars,
+// otherwise the first 8. When prefixAppName is on, the app name is prepended
+// for readability only — it has no role in verification.
+function buildPrefix(
+  appName: string,
+  code: string,
+  prefixAppName: boolean,
+): string {
+  const display = code.length < 8 ? code : code.substring(0, 8);
+  return prefixAppName ? `${appName}_${display}` : display;
+}
+
+export function generateToken(
+  appName: string,
+  codeLength: number = DEFAULT_CODE_LENGTH,
+  prefixAppName: boolean = false,
+): {
   raw: string;
   hash: string;
   prefix: string;
 } {
-  const hex = randomBytes(32).toString('hex');
-  const raw = `${appName}_${hex}`;
+  const code = randomBytes(Math.ceil(codeLength / 2))
+    .toString('hex')
+    .substring(0, codeLength);
+  const raw = prefixAppName ? `${appName}_${code}` : code;
   const hash = createHash('sha256').update(raw).digest('hex');
-  const prefix = `${appName}_${hex.substring(0, 8)}`;
+  const prefix = buildPrefix(appName, code, prefixAppName);
   return { raw, hash, prefix };
 }
 
@@ -16,40 +40,21 @@ export function hashToken(rawToken: string): string {
   return createHash('sha256').update(rawToken).digest('hex');
 }
 
-export function extractAppName(rawToken: string): string | null {
-  const separatorIndex = rawToken.lastIndexOf('_');
-  if (separatorIndex === -1) return null;
-  return rawToken.substring(0, separatorIndex);
-}
-
-export function validateCustomToken(
-  rawToken: string,
-  expectedAppName: string,
-): string | null {
-  const separatorIndex = rawToken.lastIndexOf('_');
-  if (separatorIndex === -1) return 'Token must contain an underscore separator';
-
-  const prefix = rawToken.substring(0, separatorIndex);
-  const code = rawToken.substring(separatorIndex + 1);
-
-  if (prefix !== expectedAppName) {
-    return `Token prefix "${prefix}" does not match app name "${expectedAppName}"`;
+// Custom tokens are arbitrary operator-supplied codes. The app name is no longer
+// part of the token — the only constraint is the length range.
+export function validateCustomToken(rawToken: string): string | null {
+  if (rawToken.length < MIN_CODE_LENGTH || rawToken.length > MAX_CODE_LENGTH) {
+    return `Token must be ${MIN_CODE_LENGTH}-${MAX_CODE_LENGTH} characters, got ${rawToken.length}`;
   }
-
-  if (code.length < 8 || code.length > 64) {
-    return `Token code must be 8-64 characters, got ${code.length}`;
-  }
-
   return null;
 }
 
-export function processCustomToken(
-  rawToken: string,
-  appName: string,
-): { raw: string; hash: string; prefix: string } {
-  const separatorIndex = rawToken.lastIndexOf('_');
-  const code = rawToken.substring(separatorIndex + 1);
+export function processCustomToken(rawToken: string): {
+  raw: string;
+  hash: string;
+  prefix: string;
+} {
   const hash = createHash('sha256').update(rawToken).digest('hex');
-  const prefix = `${appName}_${code.substring(0, 8)}`;
+  const prefix = rawToken.length < 8 ? rawToken : rawToken.substring(0, 8);
   return { raw: rawToken, hash, prefix };
 }

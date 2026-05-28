@@ -241,13 +241,14 @@ function buildCsvPayload(appName, count) {
   return csv;
 }
 
-// Build items with custom tokens
+// Build items with custom tokens.
+// Custom tokens are arbitrary codes (4–64 chars) — no app-name prefix required.
 function buildCustomTokenItems(appName) {
   const codes = ['AbCdEfGh12345678', 'MySecretToken9999', 'Partner_Key_00001', 'LongCustomCodeHere01234567890123'];
   return codes.map((code, i) => ({
     userId: `custom-user-${i + 1}`,
     appName,
-    token: `${appName}_${code}`,
+    token: code,
   }));
 }
 
@@ -257,6 +258,17 @@ async function main() {
   console.log(`Server:     ${BASE}`);
   console.log(`Target:     ${SEED_TOKEN_COUNT} tokens across ${SEED_APP_COUNT} apps`);
   console.log();
+
+  // ── 0. Configure token generation settings ─────────────
+  // Widen the generated-code length so seeding many tokens never runs out of
+  // unique short codes, and exercise the GET/PATCH /settings endpoints.
+  console.log('--- Phase 0: Token Generation Settings ---');
+  const { data: before } = await api('GET', '/settings', null, tier2Headers());
+  console.log(`  Current: codeLength=${before.codeLength}, prefixAppName=${before.prefixAppName}`);
+  const { status: setStatus, data: after } = await api(
+    'PATCH', '/settings', { codeLength: 12, prefixAppName: false }, tier2Headers(),
+  );
+  console.log(`  Updated (status ${setStatus}): codeLength=${after.codeLength}, prefixAppName=${after.prefixAppName}`);
 
   // ── 1. Register apps if needed ──────────────────────────
   console.log('--- Phase 1: Register Apps ---');

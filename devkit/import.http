@@ -147,8 +147,9 @@ X-Operator-Key: {{$dotenv OPERATOR_KEY}}
 
 ### --------------------------------------------------------
 ### Custom Token Import (Operator — Tier 2)
-### Operator provides their own token strings
-### Token format: {appName}_{CODE}, CODE must be 8–64 chars
+### Operator provides their own token strings.
+### A custom token is any string 4–64 chars — no app-name prefix required.
+### The token is verified against the app it was imported under (header), not its text.
 ### --------------------------------------------------------
 
 ### Import with custom token — JSON body
@@ -162,7 +163,7 @@ X-Operator-Key: {{$dotenv OPERATOR_KEY}}
   {
     "userId": "user-custom-001",
     "appName": "myapp",
-    "token": "myapp_CustomSecretToken001"
+    "token": "CustomSecretToken001"
   }
 ]
 
@@ -174,7 +175,7 @@ X-App-Name: {{$dotenv ADMIN_APP_NAME}}
 X-Operator-Key: {{$dotenv OPERATOR_KEY}}
 
 userId,appName,token
-user-custom-002,myapp,myapp_AnotherCustomTok02
+user-custom-002,myapp,AnotherCustomTok02
 
 ### Import with custom token — per-app (appName from URL)
 POST {{$dotenv HOST}}/import/myapp
@@ -186,11 +187,11 @@ X-Operator-Key: {{$dotenv OPERATOR_KEY}}
 [
   {
     "userId": "user-custom-003",
-    "token": "myapp_PerAppCustomTok003"
+    "token": "PerAppCustomTok003"
   }
 ]
 
-### Import with custom token — invalid format (CODE too short, should be in errors[])
+### Import with custom token — invalid format (too short < 4 chars, should be in errors[])
 POST {{$dotenv HOST}}/import
 Content-Type: application/json
 X-Security: {{$dotenv SECURITY_KEY}}
@@ -201,11 +202,11 @@ X-Operator-Key: {{$dotenv OPERATOR_KEY}}
   {
     "userId": "user-custom-bad",
     "appName": "myapp",
-    "token": "myapp_short"
+    "token": "ab"
   }
 ]
 
-### Import with custom token — wrong prefix (should be in errors[])
+### Import with custom token — too long (> 64 chars, should be in errors[])
 POST {{$dotenv HOST}}/import
 Content-Type: application/json
 X-Security: {{$dotenv SECURITY_KEY}}
@@ -216,7 +217,7 @@ X-Operator-Key: {{$dotenv OPERATOR_KEY}}
   {
     "userId": "user-custom-bad2",
     "appName": "myapp",
-    "token": "wrongapp_ValidCodeHere123"
+    "token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 ]
 
@@ -231,7 +232,7 @@ X-Operator-Key: {{$dotenv OPERATOR_KEY}}
   {
     "userId": "user-custom-dup",
     "appName": "myapp",
-    "token": "myapp_CustomSecretToken001"
+    "token": "CustomSecretToken001"
   }
 ]
 
@@ -246,7 +247,7 @@ X-Operator-Key: {{$dotenv OPERATOR_KEY}}
   {
     "userId": "user-custom-001",
     "appName": "myapp",
-    "token": "myapp_ReissuedCustomTk01"
+    "token": "ReissuedCustomTk01"
   }
 ]
 

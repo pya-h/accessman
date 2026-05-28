@@ -1,6 +1,9 @@
-import { useState } from 'preact/hooks';
+import { useState, useEffect } from 'preact/hooks';
 import { getSettings, setSettings, applySettings, ACCENT_PRESETS } from '@/lib/settings';
 import type { Settings } from '@/lib/settings';
+import { getServerSettings, updateServerSettings } from '@/api/settings';
+import { useQuery } from '@/lib/use-query';
+import { showToast } from '@/components/toast';
 import { IconSun, IconMoon, IconMonitor, IconPalette } from '@/components/icons';
 import styles from './settings.module.css';
 
@@ -12,6 +15,44 @@ export function SettingsPage() {
     setCurrent(updated);
     setSettings(partial);
     applySettings(updated);
+  };
+
+  // Server-side token-generation settings (global, shared by all imports)
+  const { data: serverSettings } = useQuery(() => getServerSettings(), []);
+  const [codeLength, setCodeLength] = useState(4);
+  const [prefixAppName, setPrefixAppName] = useState(false);
+
+  useEffect(() => {
+    if (serverSettings) {
+      setCodeLength(serverSettings.codeLength);
+      setPrefixAppName(serverSettings.prefixAppName);
+    }
+  }, [serverSettings]);
+
+  const persistCodeLength = async (value: number) => {
+    const clamped = Math.max(4, Math.min(64, Math.round(value) || 4));
+    setCodeLength(clamped);
+    try {
+      const saved = await updateServerSettings({ codeLength: clamped });
+      setCodeLength(saved.codeLength);
+      showToast('success', `Access code length set to ${saved.codeLength}`);
+    } catch (err) {
+      showToast('error', (err as { message?: string })?.message || 'Failed to update setting');
+    }
+  };
+
+  const persistPrefix = async (value: boolean) => {
+    if (value === prefixAppName) return;
+    const previous = prefixAppName;
+    setPrefixAppName(value);
+    try {
+      const saved = await updateServerSettings({ prefixAppName: value });
+      setPrefixAppName(saved.prefixAppName);
+      showToast('success', 'Token generation setting updated');
+    } catch (err) {
+      setPrefixAppName(previous);
+      showToast('error', (err as { message?: string })?.message || 'Failed to update setting');
+    }
   };
 
   return (
@@ -98,6 +139,49 @@ export function SettingsPage() {
                 </button>
               ))}
             </div>
+          </div>
+        </section>
+
+        {/* Token generation (server-side, global) */}
+        <section class={styles.section}>
+          <h3 class={styles.sectionTitle}>Token Generation</h3>
+
+          <div class={styles.field}>
+            <label class={styles.label}>Access Code Length</label>
+            <input
+              type="number"
+              min={4}
+              max={64}
+              class={styles.numberInput}
+              value={codeLength}
+              onInput={(e) =>
+                setCodeLength(Number((e.target as HTMLInputElement).value))
+              }
+              onChange={(e) =>
+                persistCodeLength(Number((e.target as HTMLInputElement).value))
+              }
+            />
+            <span class={styles.hint}>
+              Length of auto-generated access codes (4–64). Custom tokens provided on import bypass this.
+            </span>
+          </div>
+
+          <div class={styles.field}>
+            <label class={styles.label}>Prefix App Name</label>
+            <div class={styles.options}>
+              {([[false, 'Off'], [true, 'On']] as const).map(([val, label]) => (
+                <button
+                  key={label}
+                  class={`${styles.optionBtn} ${prefixAppName === val ? styles.optionBtnActive : ''}`}
+                  onClick={() => persistPrefix(val)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <span class={styles.hint}>
+              Prepend the app name to generated codes (e.g. <code class="mono">myapp_a1b2</code>). For display only — the app is verified via the request header, not the prefix.
+            </span>
           </div>
         </section>
 

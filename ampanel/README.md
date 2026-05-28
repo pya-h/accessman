@@ -46,6 +46,7 @@ src/
     tokens.ts                    # Token API calls (list, detail, revoke)
     apps.ts                      # App API calls (list, create)
     import.ts                    # Import API calls (bulk, per-app, reissue)
+    settings.ts                  # Token-generation settings (GET/PATCH /api/settings)
 
   auth/
     auth-context.tsx             # Auth state provider (credentials in sessionStorage)
@@ -56,7 +57,7 @@ src/
     tokens/                      # Token list + detail pages
     apps/                        # App list + register
     import/                      # Import form + results display
-    settings/                    # UI preferences (theme, font, density)
+    settings/                    # Preferences: theme/font/density + token generation (code length, prefix)
 
   components/
     layout/shell.tsx             # App shell (sidebar + content)

@@ -6,7 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Brackets } from 'typeorm';
 import { TokenEntity } from './token.entity';
-import { hashToken, extractAppName } from './token.utils';
+import { hashToken } from './token.utils';
 import { ListTokensQueryDto, TokenStatus } from './dto/list-tokens-query.dto';
 
 @Injectable()
@@ -29,18 +29,15 @@ export class TokensService {
       }
     | { valid: false; reason: string }
   > {
-    const tokenAppName = extractAppName(rawToken);
-    if (!tokenAppName || tokenAppName !== requestingAppName) {
-      return { valid: false, reason: 'not_found' };
-    }
-
     const tokenHash = hashToken(rawToken);
     const token = await this.tokensRepository.findOne({
       where: { tokenHash },
       relations: ['app'],
     });
 
-    if (!token) {
+    // The app name is verified against the header, not a token prefix. A token
+    // that belongs to a different app is reported as not_found (no info leak).
+    if (!token || token.app.name !== requestingAppName) {
       return { valid: false, reason: 'not_found' };
     }
 
@@ -69,18 +66,13 @@ export class TokensService {
     requestingAppName: string,
     metadata: Record<string, any>,
   ): Promise<{ success: true }> {
-    const tokenAppName = extractAppName(rawToken);
-    if (!tokenAppName || tokenAppName !== requestingAppName) {
-      throw new NotFoundException('Token not found');
-    }
-
     const tokenHash = hashToken(rawToken);
     const token = await this.tokensRepository.findOne({
       where: { tokenHash },
       relations: ['app'],
     });
 
-    if (!token) {
+    if (!token || token.app.name !== requestingAppName) {
       throw new NotFoundException('Token not found');
     }
 

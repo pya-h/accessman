@@ -24,8 +24,10 @@ import { DataSource } from 'typeorm';
 import { AppsModule } from '../src/apps/apps.module';
 import { TokensModule } from '../src/tokens/tokens.module';
 import { ImportModule } from '../src/import/import.module';
+import { SettingsModule } from '../src/settings/settings.module';
 import { AppEntity } from '../src/apps/app.entity';
 import { TokenEntity } from '../src/tokens/token.entity';
+import { SettingsEntity } from '../src/settings/settings.entity';
 import securityConfig from '../src/config/security.config';
 
 const SECURITY_KEY = 'test-security-key-e2e-12345';
@@ -54,6 +56,8 @@ describe('AccessMan E2E', () => {
   async function cleanDb() {
     await dataSource.query('DELETE FROM "tokens"');
     await dataSource.query('DELETE FROM "apps"');
+    // Reset token-generation settings to defaults (codeLength 4, prefix off)
+    await dataSource.query('DELETE FROM "settings"');
   }
 
   async function seedAdminApp() {
@@ -79,7 +83,6 @@ describe('AccessMan E2E', () => {
     process.env.OPERATOR_KEY = OPERATOR_KEY;
     process.env.ADMIN_APP_NAME = ADMIN_APP;
 
-
     const moduleFixture = await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({
@@ -91,13 +94,14 @@ describe('AccessMan E2E', () => {
           url:
             process.env.DATABASE_TEST_URL ||
             'postgresql://postgres:postgres@localhost:5432/accessman_test',
-          entities: [AppEntity, TokenEntity],
+          entities: [AppEntity, TokenEntity, SettingsEntity],
           synchronize: true,
           dropSchema: true,
         }),
         AppsModule,
         TokensModule,
         ImportModule,
+        SettingsModule,
       ],
     }).compile();
 
@@ -255,7 +259,8 @@ describe('AccessMan E2E', () => {
       const body = JSON.parse(res.payload);
       expect(body.imported).toHaveLength(2);
       expect(body.errors).toHaveLength(0);
-      expect(body.imported[0].token).toMatch(/^testapp_[0-9a-f]{64}$/);
+      // Default: 4-char hex code, no app-name prefix
+      expect(body.imported[0].token).toMatch(/^[0-9a-f]{4}$/);
       expect(body.imported[0].userId).toBe('user1');
     });
 
@@ -373,7 +378,7 @@ describe('AccessMan E2E', () => {
       const body = JSON.parse(res.payload);
       expect(body.imported).toHaveLength(2);
       expect(body.imported[0].appName).toBe('perapp');
-      expect(body.imported[0].token).toMatch(/^perapp_/);
+      expect(body.imported[0].token).toMatch(/^[0-9a-f]{4}$/);
     });
 
     it('invalid items → 400', async () => {
@@ -1034,7 +1039,7 @@ describe('AccessMan E2E', () => {
       expect(JSON.parse(verifyRes.payload).valid).toBe(true);
     });
 
-    it('per-app import with custom token → prefix must match URL appName', async () => {
+    it('per-app import with custom token → token used as-is, app from URL', async () => {
       const customToken = 'permt_ValidPerAppToken1';
       const res = await app.inject({
         method: 'POST',
@@ -1048,16 +1053,15 @@ describe('AccessMan E2E', () => {
       expect(body.imported).toHaveLength(1);
       expect(body.imported[0].token).toBe(customToken);
 
-      // Mismatched prefix
-      const badRes = await app.inject({
+      // Custom token content is no longer tied to the app name — it is verified
+      // against the app the token belongs to (here 'permt', inferred from URL).
+      const verifyRes = await app.inject({
         method: 'POST',
-        url: '/api/import/permt',
-        headers: { ...operatorHeaders, 'content-type': 'application/json' },
-        payload: [{ userId: 'user2', token: 'wrongapp_SomeToken123' }],
+        url: '/api/tokens/verify',
+        headers: tier1Headers('permt'),
+        payload: { token: customToken },
       });
-      const badBody = JSON.parse(badRes.payload);
-      expect(badBody.errors).toHaveLength(1);
-      expect(badBody.errors[0].reason).toContain('does not match');
+      expect(JSON.parse(verifyRes.payload).valid).toBe(true);
     });
 
     it('reissue with custom token → old revoked, new custom token verifiable', async () => {
@@ -1068,9 +1072,7 @@ describe('AccessMan E2E', () => {
         method: 'POST',
         url: '/api/import/reissue',
         headers: { ...operatorHeaders, 'content-type': 'application/json' },
-        payload: [
-          { userId: 'user1', appName: 'reimt', token: customToken },
-        ],
+        payload: [{ userId: 'user1', appName: 'reimt', token: customToken }],
       });
 
       expect(res.statusCode).toBe(201);
@@ -1098,27 +1100,29 @@ describe('AccessMan E2E', () => {
     });
 
     it('invalid custom token format → proper error response', async () => {
-      // Too short code
+      // Too short (< 4 chars)
       const res1 = await app.inject({
         method: 'POST',
         url: '/api/import',
         headers: { ...operatorHeaders, 'content-type': 'application/json' },
-        payload: [{ userId: 'user1', appName: 'fmtapp', token: 'fmtapp_short' }],
+        payload: [{ userId: 'user1', appName: 'fmtapp', token: 'ab' }],
       });
       const body1 = JSON.parse(res1.payload);
       expect(body1.errors).toHaveLength(1);
-      expect(body1.errors[0].reason).toContain('8-64 characters');
+      expect(body1.errors[0].reason).toContain('4-64 characters');
 
-      // Wrong prefix
+      // Too long (> 64 chars)
       const res2 = await app.inject({
         method: 'POST',
         url: '/api/import',
         headers: { ...operatorHeaders, 'content-type': 'application/json' },
-        payload: [{ userId: 'user2', appName: 'fmtapp', token: 'wrong_ValidCode1234' }],
+        payload: [
+          { userId: 'user2', appName: 'fmtapp', token: 'a'.repeat(65) },
+        ],
       });
       const body2 = JSON.parse(res2.payload);
       expect(body2.errors).toHaveLength(1);
-      expect(body2.errors[0].reason).toContain('does not match');
+      expect(body2.errors[0].reason).toContain('4-64 characters');
     });
 
     it('duplicate custom token → proper error response', async () => {
@@ -1162,8 +1166,108 @@ describe('AccessMan E2E', () => {
 
       const body = JSON.parse(res.payload);
       expect(body.data).toHaveLength(1);
-      expect(body.data[0].tokenPrefix).toBe('listmt_Operator');
+      // Prefix is the first 8 chars of the provided custom token
+      expect(body.data[0].tokenPrefix).toBe('listmt_O');
       expect(body.data[0].userId).toBe('user1');
+    });
+  });
+
+  // ─── Settings (token generation) ────────────────────────────────────
+
+  describe('Settings — token generation', () => {
+    beforeEach(async () => {
+      await cleanDb();
+      await seedAdminApp();
+    });
+
+    it('GET /api/settings returns defaults', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/settings',
+        headers: operatorHeaders,
+      });
+      expect(res.statusCode).toBe(200);
+      expect(JSON.parse(res.payload)).toEqual({
+        codeLength: 4,
+        prefixAppName: false,
+      });
+    });
+
+    it('PATCH code length is honored by subsequent imports', async () => {
+      const patchRes = await app.inject({
+        method: 'PATCH',
+        url: '/api/settings',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: { codeLength: 12 },
+      });
+      expect(patchRes.statusCode).toBe(200);
+      expect(JSON.parse(patchRes.payload).codeLength).toBe(12);
+
+      const importRes = await app.inject({
+        method: 'POST',
+        url: '/api/import',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [{ userId: 'u1', appName: 'lenapp' }],
+      });
+      const body = JSON.parse(importRes.payload);
+      expect(body.imported[0].token).toMatch(/^[0-9a-f]{12}$/);
+    });
+
+    it('PATCH prefixAppName prepends the app name to generated tokens', async () => {
+      await app.inject({
+        method: 'PATCH',
+        url: '/api/settings',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: { prefixAppName: true },
+      });
+
+      const importRes = await app.inject({
+        method: 'POST',
+        url: '/api/import',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: [{ userId: 'u1', appName: 'prefapp2' }],
+      });
+      const body = JSON.parse(importRes.payload);
+      const rawToken = body.imported[0].token;
+      expect(rawToken).toMatch(/^prefapp2_[0-9a-f]{4}$/);
+
+      // The prefixed token still verifies (app checked via header, not prefix)
+      const verifyRes = await app.inject({
+        method: 'POST',
+        url: '/api/tokens/verify',
+        headers: tier1Headers('prefapp2'),
+        payload: { token: rawToken },
+      });
+      expect(JSON.parse(verifyRes.payload).valid).toBe(true);
+    });
+
+    it('rejects codeLength below the minimum (4)', async () => {
+      const res = await app.inject({
+        method: 'PATCH',
+        url: '/api/settings',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: { codeLength: 3 },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('rejects codeLength above the maximum (64)', async () => {
+      const res = await app.inject({
+        method: 'PATCH',
+        url: '/api/settings',
+        headers: { ...operatorHeaders, 'content-type': 'application/json' },
+        payload: { codeLength: 65 },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('requires operator access', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/settings',
+        headers: tier1Headers(ADMIN_APP),
+      });
+      expect(res.statusCode).toBe(403);
     });
   });
 
@@ -1179,9 +1283,14 @@ describe('AccessMan E2E', () => {
       const randApp = `dyn-${randomBytes(6).toString('hex')}`;
       const randUser = randomUUID();
       const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + Math.floor(Math.random() * 365) + 30);
+      futureDate.setDate(
+        futureDate.getDate() + Math.floor(Math.random() * 365) + 30,
+      );
       const expiresAt = futureDate.toISOString();
-      const randMeta = { tag: randomBytes(4).toString('hex'), score: Math.floor(Math.random() * 1000) };
+      const randMeta = {
+        tag: randomBytes(4).toString('hex'),
+        score: Math.floor(Math.random() * 1000),
+      };
 
       // Import
       const importRes = await app.inject({
@@ -1195,7 +1304,7 @@ describe('AccessMan E2E', () => {
       const importBody = JSON.parse(importRes.payload);
       expect(importBody.imported).toHaveLength(1);
       const rawToken = importBody.imported[0].token;
-      expect(rawToken).toMatch(new RegExp(`^${randApp}_[0-9a-f]{64}$`));
+      expect(rawToken).toMatch(/^[0-9a-f]{4}$/);
 
       // Verify
       const verifyRes = await app.inject({
@@ -1330,10 +1439,10 @@ describe('AccessMan E2E', () => {
       expect(list.data.some((t: any) => t.id === tokenId)).toBe(true);
     });
 
-    it('token prefix mismatch → not_found on verify', async () => {
+    it('app-name header mismatch → not_found on verify', async () => {
       const rawToken = await importToken('user1', 'realapp');
 
-      // Verify via a different app name
+      // Verify via a different app name — token belongs to 'realapp'
       await dataSource.query(
         `INSERT INTO "apps" ("name") VALUES ('otherapp') ON CONFLICT DO NOTHING`,
       );
@@ -1372,7 +1481,8 @@ describe('AccessMan E2E', () => {
 
       const body = JSON.parse(res.payload);
       expect(body.data).toHaveLength(1);
-      expect(body.data[0].tokenPrefix).toMatch(/^prefapp_[0-9a-f]{8}$/);
+      // Default 4-char code shown in full (shorter than 8), no app-name prefix
+      expect(body.data[0].tokenPrefix).toMatch(/^[0-9a-f]{4}$/);
     });
 
     it('metadata update on non-existent token → 404', async () => {
@@ -1419,7 +1529,7 @@ describe('AccessMan E2E', () => {
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
       );
       expect(body.imported[0].appName).toBe('autoidapp');
-      expect(body.imported[0].token).toMatch(/^autoidapp_/);
+      expect(body.imported[0].token).toMatch(/^[0-9a-f]{4}$/);
     });
 
     it('per-app import without userId → auto-generates UUID', async () => {
@@ -1637,7 +1747,6 @@ describe('Static Serving Integration', () => {
     process.env.OPERATOR_KEY = OPERATOR_KEY;
     process.env.ADMIN_APP_NAME = ADMIN_APP;
 
-
     // Create temp public directory with index.html
     tmpDir = mkdtempSync(join(tmpdir(), 'accessman-static-'));
     writeFileSync(
@@ -1677,6 +1786,7 @@ describe('Static Serving Integration', () => {
     // Register @fastify/static + SPA fallback (mirrors ServeStaticModule's
     // FastifyLoader with fallthrough: true)
     const fastify = app.getHttpAdapter().getInstance();
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const fastifyStatic = require('@fastify/static');
 
     await fastify.register(fastifyStatic, {

@@ -70,6 +70,8 @@ All API requests require two headers: `X-Security` (shared key) and `X-App-Name`
 | `POST` | `/api/tokens/:id/revoke` | Revoke a token |
 | `GET` | `/api/apps` | List all registered apps |
 | `POST` | `/api/apps` | Register a new app |
+| `GET` | `/api/settings` | Read token-generation settings |
+| `PATCH` | `/api/settings` | Update code length / app-name prefix |
 
 ### Import Fields
 
@@ -78,19 +80,21 @@ All API requests require two headers: `X-Security` (shared key) and `X-App-Name`
 | `userId` | no (import), **yes** (reissue) | User identifier. Auto-generated UUID if omitted during import |
 | `appName` | yes (global), no (per-app URL) | Target app name. Inferred from URL for `/api/import/:appName` |
 | `expiresAt` | no | ISO 8601 date. No expiry if omitted |
-| `token` | no | Custom token string. Auto-generated if omitted. Format: `{appName}_{CODE}`, CODE 8-64 chars |
+| `token` | no | Custom token string. Auto-generated if omitted. Any string 4-64 chars (no app prefix required) |
 
 ### Custom Token Import
 
-All import endpoints support an optional `token` field per item, allowing operators to provide their own token strings instead of having the service auto-generate them. Custom tokens must follow the format `{appName}_{CODE}` where CODE is 8-64 characters.
+All import endpoints support an optional `token` field per item, allowing operators to provide their own token strings instead of having the service auto-generate them. A custom token is any string 4-64 characters — no app-name prefix is required.
 
 ## Token Format
 
+By default a token is a random hex code of the configured length (default 4), with no app-name prefix:
+
 ```
-{appName}_{64_hex_chars}
+a1b2
 ```
 
-Tokens are stored as SHA-256 hashes. The raw token is returned only once at creation time. Each token is scoped to one user + one app, with one active token allowed per pair.
+Code length and an optional app-name prefix are controlled by the `GET`/`PATCH /api/settings` endpoints (`codeLength` 4-64, default 4; `prefixAppName` default false — display only). Tokens are stored as SHA-256 hashes and the raw token is returned only once at creation time. Each token is scoped to one user + one app (one active token per pair); the owning app is verified against the `X-App-Name` header, not the token text.
 
 ## Scripts
 
@@ -141,7 +145,7 @@ src/
 
   tokens/
     token.entity.ts
-    token.utils.ts           # generateToken, hashToken, extractAppName,
+    token.utils.ts           # generateToken, hashToken,
                              # validateCustomToken, processCustomToken
     tokens.service.ts
     tokens.controller.ts
@@ -160,8 +164,17 @@ src/
       import-item-per-app.dto.ts # userId optional, no appName
       reissue-item.dto.ts        # userId required
 
+  settings/
+    settings.entity.ts       # Single-row token-generation settings
+    settings.service.ts      # get / update singleton row
+    settings.controller.ts   # GET / PATCH /api/settings
+    settings.module.ts
+    dto/update-settings.dto.ts
+
   migrations/
-    <timestamp>-Init.ts      # Schema + admin app seed
+    <timestamp>-Init.ts            # Schema + admin app seed
+    <timestamp>-AddLastVerifiedAt.ts
+    <timestamp>-CreateSettings.ts  # settings table + singleton row
 ```
 
 ## Testing

@@ -54,6 +54,20 @@ test.describe('Settings Page', () => {
     expect(density).toBe('6px');
   });
 
+  test('shows token generation settings and toggles app-name prefix', async ({ page }) => {
+    // Access code length input is present with a numeric default
+    const codeLength = page.locator('input[type="number"]');
+    await expect(codeLength).toBeVisible();
+    expect(Number(await codeLength.inputValue())).toBeGreaterThanOrEqual(4);
+
+    // Toggle prefix On (persists to server) then back Off (default)
+    await page.getByRole('button', { name: 'On', exact: true }).click();
+    await expect(
+      page.locator('[class*="toast"]').filter({ hasText: /updated/i }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Off', exact: true }).click();
+  });
+
   test('settings persist after reload', async ({ page }) => {
     await page.getByRole('button', { name: 'Dark' }).click();
     await page.getByRole('button', { name: /Large \(16px\)/ }).click();

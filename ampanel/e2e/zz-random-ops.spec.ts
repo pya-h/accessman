@@ -15,7 +15,7 @@ function randomFutureDate(): string {
 
 function randomCustomToken(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const len = 8 + Math.floor(Math.random() * 57); // 8–64
+  const len = 4 + Math.floor(Math.random() * 61); // 4–64 (no app-name prefix required)
   return Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 

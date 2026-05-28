@@ -45,8 +45,8 @@ export function getFields(scope: 'all' | 'single', mode: ImportMode): FieldDef[]
     {
       name: 'token',
       required: false,
-      example: scope === 'all' ? 'myapp_CustomSecretToken01' : '{appName}_CustomSecretToken01',
-      note: 'auto-generated if omitted. Format: {appName}_{CODE}, CODE is 8–64 chars',
+      example: 'MyCustomCode01',
+      note: 'auto-generated if omitted. Custom code: 4–64 chars (no app prefix needed)',
     },
   );
   return fields;

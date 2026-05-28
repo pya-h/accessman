@@ -97,13 +97,25 @@ describe('TokensService', () => {
       expect(saved.lastVerifiedAt).toBeInstanceOf(Date);
     });
 
-    it('returns not_found for wrong app prefix', async () => {
-      const { raw } = generateToken('other-app');
+    it('returns not_found when token belongs to a different app', async () => {
+      const { raw, hash } = generateToken(APP_NAME);
+      repo.findOne.mockResolvedValue(
+        mockToken({
+          tokenHash: hash,
+          app: {
+            id: 2,
+            name: 'other-app',
+            isActive: true,
+            createdAt: new Date(),
+            tokens: [],
+          },
+        }),
+      );
 
       const result = await service.verify(raw, APP_NAME);
 
       expect(result).toEqual({ valid: false, reason: 'not_found' });
-      expect(repo.findOne).not.toHaveBeenCalled();
+      expect(repo.save).not.toHaveBeenCalled();
     });
 
     it('returns expired for expired token', async () => {
@@ -168,13 +180,25 @@ describe('TokensService', () => {
       expect(saved.metadata).toEqual({ newKey: 'value' });
     });
 
-    it('throws NotFoundException for wrong app prefix', async () => {
-      const { raw } = generateToken('other-app');
+    it('throws NotFoundException when token belongs to a different app', async () => {
+      const { raw, hash } = generateToken(APP_NAME);
+      repo.findOne.mockResolvedValue(
+        mockToken({
+          tokenHash: hash,
+          app: {
+            id: 2,
+            name: 'other-app',
+            isActive: true,
+            createdAt: new Date(),
+            tokens: [],
+          },
+        }),
+      );
 
       await expect(service.updateMetadata(raw, APP_NAME, {})).rejects.toThrow(
         NotFoundException,
       );
-      expect(repo.findOne).not.toHaveBeenCalled();
+      expect(repo.save).not.toHaveBeenCalled();
     });
 
     it('throws BadRequestException for expired token', async () => {
@@ -383,11 +407,16 @@ describe('TokensService', () => {
     it('verify and updateMetadata with random appName and metadata', async () => {
       const randApp = `dynapp-${randomBytes(6).toString('hex')}`;
       const randUser = randomUUID();
-      const randMeta = { role: randomBytes(4).toString('hex'), level: Math.floor(Math.random() * 100) };
+      const randMeta = {
+        role: randomBytes(4).toString('hex'),
+        level: Math.floor(Math.random() * 100),
+      };
 
       const { raw, hash } = generateToken(randApp);
       const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + Math.floor(Math.random() * 365) + 1);
+      futureDate.setDate(
+        futureDate.getDate() + Math.floor(Math.random() * 365) + 1,
+      );
 
       repo.findOne.mockResolvedValue(
         mockToken({
@@ -395,12 +424,22 @@ describe('TokensService', () => {
           userId: randUser,
           metadata: {},
           expiresAt: futureDate,
-          app: { id: 1, name: randApp, isActive: true, createdAt: new Date(), tokens: [] },
+          app: {
+            id: 1,
+            name: randApp,
+            isActive: true,
+            createdAt: new Date(),
+            tokens: [],
+          },
         }),
       );
 
       const verifyResult = await service.verify(raw, randApp);
-      expect(verifyResult).toMatchObject({ valid: true, userId: randUser, appName: randApp });
+      expect(verifyResult).toMatchObject({
+        valid: true,
+        userId: randUser,
+        appName: randApp,
+      });
 
       repo.findOne.mockResolvedValue(
         mockToken({
@@ -408,7 +447,13 @@ describe('TokensService', () => {
           userId: randUser,
           metadata: {},
           expiresAt: futureDate,
-          app: { id: 1, name: randApp, isActive: true, createdAt: new Date(), tokens: [] },
+          app: {
+            id: 1,
+            name: randApp,
+            isActive: true,
+            createdAt: new Date(),
+            tokens: [],
+          },
         }),
       );
 
